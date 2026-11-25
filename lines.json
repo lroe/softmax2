@@ -1,0 +1,532 @@
+[
+ {
+  "text": "Every AI model you have ever trained runs through one function. Softmax.",
+  "start": 0.0,
+  "end": 4.42
+ },
+ {
+  "text": "Last month, Google DeepMind showed that the standard version of it has a bug.",
+  "start": 5.12,
+  "end": 8.86
+ },
+ {
+  "text": "The bug makes your model's best learning signal round to exactly zero. And it happens at the moment your model is most sure of itself. The paper says it lives in JAX, PyTorch, TensorFlow, and the textbooks.",
+  "start": 9.32,
+  "end": 20.84
+ },
+ {
+  "text": "That's only half of it. The same month, a Stanford team built an agent that does most of its thinking in silence. No words. It only speaks when it needs a tool. In the paper's tests, it beat several frontier models on agent benchmarks, and it wrote up to half as many tokens as a normal agent its size.",
+  "start": 21.52,
+  "end": 37.52
+ },
+ {
+  "text": "This video breaks down three new papers, so you can get the full story in under half an hour. By the end, you'll know how to test your own training run for this bug with five lines of code. And you'll see why the next jump in reasoning models might come from making them say less.",
+  "start": 38.18,
+  "end": 52.0
+ },
+ {
+  "text": "These two stories are connected. Every time a language model says a word, it does two things. It turns scores into chances with softmax. Then it picks one word and throws everything else away.",
+  "start": 52.84,
+  "end": 63.38
+ },
+ {
+  "text": "That gives us two questions.",
+  "start": 63.9,
+  "end": 64.96
+ },
+ {
+  "text": "One. Softmax sits inside every model we train. So how solid is it?",
+  "start": 65.74,
+  "end": 69.74
+ },
+ {
+  "text": "Two. If every thought has to be squeezed into a single word, how much do we lose?",
+  "start": 70.36,
+  "end": 74.5
+ },
+ {
+  "text": "Three papers answer both, and they share one idea. Softmax is the gate between what a model thinks and what it says. Paper one says the gate leaks. Papers two and three say we push way too much through it.",
+  "start": 75.18,
+  "end": 86.44
+ },
+ {
+  "text": "One test in the second paper stands out. It shows whether those silent thoughts are real, or just filler. I'll show you the table.",
+  "start": 86.44,
+  "end": 93.14
+ },
+ {
+  "text": "But first, let's start from zero. You can't see the bug without seeing the loop.",
+  "start": 93.84,
+  "end": 97.32
+ },
+ {
+  "text": "A language model does one job. It reads some text and guesses the next word. Then it adds that word to the text and guesses again. That's the whole loop.",
+  "start": 97.96,
+  "end": 105.94
+ },
+ {
+  "text": "Inside one guess, there are three steps.",
+  "start": 106.62,
+  "end": 108.66
+ },
+ {
+  "text": "Step one. The model thinks. It turns your text into a long list of numbers, thousands of them. That list is the model's thought. Researchers call it the hidden state.",
+  "start": 109.44,
+  "end": 119.08
+ },
+ {
+  "text": "Step two. The model scores every word it knows. Fifty thousand words, fifty thousand scores. A high score means, \"I like this word.\" Those scores are called logits.",
+  "start": 119.8,
+  "end": 129.62
+ },
+ {
+  "text": "Step three. Scores are not chances. What do you do with a score of nine, or minus nine? You want something like, \"ninety percent cat, eight percent dog.\" So we need a machine that turns scores into chances.",
+  "start": 130.42,
+  "end": 142.12
+ },
+ {
+  "text": "That machine is softmax. Here's the smallest example I can think of.",
+  "start": 142.12,
+  "end": 146.32
+ },
+ {
+  "text": "Three singers. The judges give 3, 1, and 0. Softmax does two things. First, it makes every score positive by raising the number e to the power of the score. Second, it divides by the total, so everything adds up to one hundred percent. Now the singers have 84, 11, and 4 percent.",
+  "start": 146.7,
+  "end": 164.46
+ },
+ {
+  "text": "So a small gap in score becomes a big gap in chances. Widen the gap a bit more, and the winner takes almost everything. Remember that. It matters in a few minutes.",
+  "start": 164.46,
+  "end": 173.84
+ },
+ {
+  "text": "Now, how does the model learn? You show it the right answer and measure how surprised it was. Gave the right word 84 percent? Small surprise. Gave it one percent? Big surprise. That surprise number is called cross-entropy loss.",
+  "start": 174.6,
+  "end": 187.74
+ },
+ {
+  "text": "Then comes the key question: which scores should move, and in which direction? That's the gradient. For softmax, the answer is simple. For every word, it's the chance you gave it, minus one if it was the right word.",
+  "start": 188.4,
+  "end": 200.48
+ },
+ {
+  "text": "Add those up across all words, and you always get zero. Every push toward the right word comes out of the wrong words. It's a tug of war with a fixed rope. Remember that rule. The whole bug is that rule breaking.",
+  "start": 201.0,
+  "end": 212.96
+ },
+ {
+  "text": "One last step. After the chances, the model picks a word, writes it down, and turns it back into numbers. That's the token, and those numbers are the embedding. Then the loop starts again.",
+  "start": 213.58,
+  "end": 223.24
+ },
+ {
+  "text": "Think. Score. Chances. Pick a word. Feed it back.",
+  "start": 223.86,
+  "end": 226.78
+ },
+ {
+  "text": "Today is about two weak spots in that loop. The softmax step. And the pick-a-word step.",
+  "start": 226.78,
+  "end": 232.42
+ },
+ {
+  "text": "This is also how a newer kind of model, called a decision model, works. It reads the question once, stops right after the chances, and hands them back. No picking. No looping. Keep that in mind for later.",
+  "start": 232.7,
+  "end": 243.3
+ },
+ {
+  "text": "Let me tell you a story first.",
+  "start": 244.02,
+  "end": 244.96
+ },
+ {
+  "text": "A researcher trains a tiny model to do addition. It's a famous test. The model memorizes the training examples. Then it sits there, stuck, for a very long time. Then, out of nowhere, it figures out the real pattern. That jump has a name. Grokking.",
+  "start": 245.5,
+  "end": 259.52
+ },
+ {
+  "text": "But in some runs, something strange happens. The loss shoots up in sudden spikes. People call them slingshots. And some runs never grok at all.",
+  "start": 260.18,
+  "end": 267.7
+ },
+ {
+  "text": "Nobody had a clean explanation. The new paper blames one line of arithmetic inside softmax.",
+  "start": 268.2,
+  "end": 273.02
+ },
+ {
+  "text": "To see it, you need two small ideas.",
+  "start": 273.68,
+  "end": 275.94
+ },
+ {
+  "text": "Idea one. Softmax has an overflow problem. Raise e to a big score, like 89, and a 32-bit number can't hold it. Infinity. So every library does the same trick. It subtracts the biggest score from every score. The chances don't change. But now the biggest score is zero, and e to the zero is exactly one. It's called the max-shift trick.",
+  "start": 276.78,
+  "end": 297.12
+ },
+ {
+  "text": "After the shift, the bottom line of softmax is one, plus some tiny numbers. Each tiny number is e to the minus the lead, where the lead is how far the winner is ahead. Bigger lead, tinier number.",
+  "start": 297.94,
+  "end": 309.4
+ },
+ {
+  "text": "Idea two. Computers can't keep every digit. Picture a calculator that only shows seven digits. Type in one billion. Add one cent. Still one billion. The cent vanished.",
+  "start": 310.22,
+  "end": 320.36
+ },
+ {
+  "text": "Real computers do the same thing near the number one. They can store a tiny number like ten to the minus thirty-eight, no problem. But one plus four times ten to the minus eight? That rounds to exactly one. The tiny number gets swallowed.",
+  "start": 320.96,
+  "end": 332.48
+ },
+ {
+  "text": "Now put the two ideas together.",
+  "start": 333.02,
+  "end": 334.52
+ },
+ {
+  "text": "When your model gets confident, the lead gets big and the tiny numbers get tinier. The bottom line becomes one plus tiny. The computer rounds it to one. So the right word's chance becomes exactly one. The loss becomes exactly zero. And the gradient on the right word, one minus one, becomes exactly zero.",
+  "start": 335.14,
+  "end": 352.26
+ },
+ {
+  "text": "But the wrong words never added one to anything. They keep their tiny, real values.",
+  "start": 352.96,
+  "end": 357.34
+ },
+ {
+  "text": "Here's the paper's example. Scores: 9, minus 9, minus 9. The right answer is the first.",
+  "start": 358.22,
+  "end": 364.18
+ },
+ {
+  "text": "Standard code says the loss is zero, and the right word gets no push. The truth is a tiny loss and a tiny, real push. The rope in our tug of war is cut on one side. The gradients no longer sum to zero.",
+  "start": 364.74,
+  "end": 377.2
+ },
+ {
+  "text": "Let's call the line where this starts the precision cliff. In B F sixteen, it's a lead of about 5.5. In F P thirty-two, about 16.6. In F P sixty-four, about 36.7.",
+  "start": 378.1,
+  "end": 390.2
+ },
+ {
+  "text": "That sounds too small to matter.",
+  "start": 390.2,
+  "end": 391.56
+ },
+ {
+  "text": "But Adam makes it matter.",
+  "start": 392.4,
+  "end": 394.02
+ },
+ {
+  "text": "Adam is the default optimizer, and its idea is simple. For each weight, look at how big its recent gradients were, and divide by that. Quiet weights take bigger steps. Loud weights take smaller ones. Usually great. But here, the error is tiny, and it's lopsided. It points the same way every step. Adam sees something small and turns it up. So a rounding error becomes a steady push.",
+  "start": 394.86,
+  "end": 418.34
+ },
+ {
+  "text": "The paper says this explains the slingshot spikes. It also explains the runs that fail to grok with weight decay.",
+  "start": 419.2,
+  "end": 424.62
+ },
+ {
+  "text": "Now the test. Modular addition, five seeds. In B F sixteen, standard cross-entropy reaches 93.3 percent test accuracy. The fixed version reaches 100. In F P thirty-two, 94.3 versus 100. In F P sixty-four, both hit 100, so the problem is precision. The math itself is fine.",
+  "start": 425.36,
+  "end": 446.36
+ },
+ {
+  "text": "And look at where the standard B F sixteen run stops. At a lead of 5.1. Just under the cliff at 5.5. It hit the wall and stalled.",
+  "start": 447.28,
+  "end": 455.06
+ },
+ {
+  "text": "There's a second bug, and it hits distillation. That's when a small student model learns to copy the chances of a big teacher. When the student matches the teacher, the gradient should be zero. Nothing left to learn. But standard code computes the student's chances one way and the teacher's another, and their last digits disagree. So even when the two are identical, a small leftover gradient remains. In one reproduction, about six times ten to the minus eight. The student has already matched the teacher, and it keeps drifting. The paper calls this softmax cancellation.",
+  "start": 455.64,
+  "end": 486.86
+ },
+ {
+  "text": "So what's the fix? Never add one to the tiny number. Use functions made for small numbers: softplus, exp-m-one, and log-one-p. Think of them as the calculator's small-number mode. The paper also rewrites cross-entropy so the right answer's gradient is computed as minus the sum of the others. That forces the gradients to sum to zero, and they stay accurate until floating point runs out of room, around a lead of 88.",
+  "start": 487.7,
+  "end": 511.78
+ },
+ {
+  "text": "Now check your own code. This is the textbook recipe in plain NumPy, in F P thirty-two.",
+  "start": 512.64,
+  "end": 518.18
+ },
+ {
+  "text": "Run it. The sum comes out around three times ten to the minus eight. If your loss does the same thing in your training precision, you have the bug.",
+  "start": 518.18,
+  "end": 525.1
+ },
+ {
+  "text": "Three caveats before you rewrite anything.",
+  "start": 525.84,
+  "end": 527.58
+ },
+ {
+  "text": "One. This is a preprint, and the headline numbers come from a small benchmark. As far as I can tell, nobody has shown a frontier-scale run changing because of this fix.",
+  "start": 528.14,
+  "end": 535.92
+ },
+ {
+  "text": "Two. No framework has adopted it yet. Today, the fix is a snippet you paste in. And if you train in F P sixty-four, you were never exposed. The people at risk use B F sixteen or F P thirty-two with Adam. That's most of us.",
+  "start": 536.48,
+  "end": 548.42
+ },
+ {
+  "text": "Three. A follow-up paper says even this fix still fails on some inputs, and it proposes a more robust version. Earlier work had already spotted the first bug in grokking runs. This paper adds the second one, and gives one fix for both. So treat it as a strong lead for now.",
+  "start": 549.04,
+  "end": 563.76
+ },
+ {
+  "text": "Now the second weak spot. The pick-a-word step.",
+  "start": 564.36,
+  "end": 567.12
+ },
+ {
+  "text": "Why does a model have to write down every thought? For a long time, nobody asked.",
+  "start": 567.64,
+  "end": 571.68
+ },
+ {
+  "text": "When a reasoning model thinks, it writes. Page after page of text. That text is the thinking. It works. Models that write more tend to do better. But there's a price. Every word costs one full trip through the entire model.",
+  "start": 572.36,
+  "end": 583.92
+ },
+ {
+  "text": "And look at what happens at each word. The model has a rich thought, thousands of numbers. Softmax squeezes it into one pick from a list of tens of thousands of words. Then that single word is turned back into numbers.",
+  "start": 584.32,
+  "end": 597.58
+ },
+ {
+  "text": "It's like describing a painting by picking one word from a dictionary.",
+  "start": 598.1,
+  "end": 601.56
+ },
+ {
+  "text": "So some researchers asked: what if we skip the squeeze? Take the thought and feed it straight back in. Let the model reason in its own language. This is called latent reasoning. Latent just means hidden.",
+  "start": 602.32,
+  "end": 614.22
+ },
+ {
+  "text": "A 2024 paper called Coconut tried it. It's faster, and a thought can hold far more than one word can.",
+  "start": 614.92,
+  "end": 621.44
+ },
+ {
+  "text": "But it came with three problems.",
+  "start": 621.98,
+  "end": 623.56
+ },
+ {
+  "text": "One. No tools. To search the web or run code, a model has to write text. Silent thoughts can't do that.",
+  "start": 624.3,
+  "end": 631.16
+ },
+ {
+  "text": "Two. You can't read it. Text is how we debug and audit an agent. A vector is a black box.",
+  "start": 631.64,
+  "end": 637.18
+ },
+ {
+  "text": "Three. A mismatch. The thought lives in a different space than the one the input layer was trained on. Feeding one where the other belongs is shaky.",
+  "start": 637.76,
+  "end": 645.84
+ },
+ {
+  "text": "And the numbers are brutal. On Gaia, a hard agent benchmark, at the 8-billion-parameter size, Coconut scores 3.9. A normal text agent trained with reinforcement learning scores 32 to 39. Silence alone collapses the moment a model has to act in the world.",
+  "start": 646.7,
+  "end": 663.32
+ },
+ {
+  "text": "So here's the idea behind Hybrid Reasoning Agents, from Stanford, Together AI, U I U C, and Meta. Think in latent. Act in text.",
+  "start": 664.02,
+  "end": 672.54
+ },
+ {
+  "text": "Here's how it works. The agent runs like a normal language model. Then it writes a special token that means, \"going silent.\" Now it's in latent mode. It takes its top-layer thought and feeds it straight back in as the next input. No softmax. No picking. No dictionary. It can do tens, even hundreds, of these silent steps. When the thought lands near a special end marker, it steps back into text, and makes its tool call.",
+  "start": 673.3,
+  "end": 697.94
+ },
+ {
+  "text": "The piece that makes this work is a tiny adapter called HybridLink. It adds a small correction to the thought, so it fits the space the input layer expects. That's about ten million parameters on a four-billion-parameter model. How much does it matter? On Math five hundred, with no alignment, 71.4 percent. With HybridLink, 88.2.",
+  "start": 698.52,
+  "end": 719.54
+ },
+ {
+  "text": "Then there's memory. As a model reads, it keeps notes so it doesn't have to re-read everything. Those notes are the K V cache. In a normal agent, after a tool call, you paste the whole history back in as text. But silent thoughts have no text version. So this agent keeps its notes alive across turns. The authors prove nothing is lost, compared to re-reading the full history.",
+  "start": 719.54,
+  "end": 740.94
+ },
+ {
+  "text": "One warning for builders. The authors say current serving engines don't support this kind of multi-turn hybrid generation. They extended the training and inference stack themselves. You can't drop this into your server tomorrow.",
+  "start": 741.8,
+  "end": 752.62
+ },
+ {
+  "text": "Training this is the hard part. There are two problems.",
+  "start": 753.48,
+  "end": 756.24
+ },
+ {
+  "text": "Problem one. Errors snowball. In text, every output snaps to a real word, so a mistake can only change which word comes next. In latent space, there's no dictionary to snap to. A small error becomes an input the model has never seen, which causes a bigger error, and after a hundred silent steps the thought turns to mush. The fix is to train the model on its own silent thoughts instead of the clean ones. On the 14-billion-parameter model, that jumps Math five hundred from 73.8 to 84.2.",
+  "start": 756.92,
+  "end": 787.3
+ },
+ {
+  "text": "Problem two is my favorite, because it brings us back to softmax. Reinforcement learning methods like G R P O need to know how likely each choice was. Where do those chances come from? Softmax. But silent steps skip softmax. No choice, no chance. So does R L break?",
+  "start": 787.3,
+  "end": 803.48
+ },
+ {
+  "text": "No. Silent steps are deterministic, so their probability is exactly one. Multiply by one, and nothing changes. You only need chances for the text tokens, as long as you replay the exact same silent thoughts when you compute them. The paper calls it hybrid policy factorization, with exact rollout replay.",
+  "start": 804.26,
+  "end": 821.56
+ },
+ {
+  "text": "Which steps go silent? When building the training data, confident steps, where the model's entropy is low, become silent. Tool calls and key decisions stay in text. Then reinforcement learning starts, with no reward for going quiet. Only correct answers, good format, and tool use. But as training goes on, the agent moves more and more of its thinking into silence. Nobody paid it to go quiet. It drifted there on its own.",
+  "start": 822.82,
+  "end": 848.12
+ },
+ {
+  "text": "Now the results. Across 11 benchmarks and three model sizes: about 10 percent better on average. 35 to 55 percent fewer tokens. 1.8 to 2.6 times faster. And an estimated 2.7 to 3.7 times cheaper per question. On Gaia at 14 billion parameters, it scores 52.4. Kimi K three scores 41.7. G P T five point six Luna scores 37.9. Those cost numbers are estimates, and they leave out reading the prompt and running tools.",
+  "start": 848.64,
+  "end": 879.42
+ },
+ {
+  "text": "Now, the test I promised. Is the silence real thinking, or filler? The authors messed with the silent thoughts on purpose. At 8 billion parameters, Math five hundred accuracy starts at 84.6. Block silent mode completely: 80.4. Add heavy random noise: 66.4. Swap in thoughts from a different problem: 44.8. Swap in random words: 41.2.",
+  "start": 880.06,
+  "end": 904.62
+ },
+ {
+  "text": "Noise hurts less than wrong thoughts do. So extra computing time isn't what helps. The content of the thoughts is. The model actually uses its silent thoughts.",
+  "start": 904.62,
+  "end": 913.42
+ },
+ {
+  "text": "Can you read them too? The authors map each silent step to its nearest word. You get a messy but readable stream that lines up with what the agent is doing. Careful, though. Nearest word is a proxy. It doesn't prove what the model really meant. I'd treat it as a debugging tool and nothing more.",
+  "start": 914.04,
+  "end": 930.08
+ },
+ {
+  "text": "There's a safety angle too. Researchers have called written-out reasoning a fragile window into what models do. Move thinking into silence, and you could lose that window. The authors say the text that remains is enough. When outside monitors saw only the visible text, the agent wrote 43 to 49 percent fewer tokens, and a monitor could spot failures about as well as it could with a text-only agent. Is that enough for safety? I don't think anyone knows yet.",
+  "start": 930.6,
+  "end": 957.16
+ },
+ {
+  "text": "It's not just this paper. Token Assorted swaps early reasoning steps for compressed latent codes. This month, a paper called VITAL uses a small gating head to choose, at every position, between speaking and silent feedback. Several teams landed on the same idea within a year.",
+  "start": 957.6,
+  "end": 972.68
+ },
+ {
+  "text": "One last caveat. These are Qwen three models, from four to fourteen billion parameters. This is research. As far as I can tell, no frontier lab has said it ships this. The code is public if you want to try it.",
+  "start": 972.68,
+  "end": 984.42
+ },
+ {
+  "text": "Now the third paper. It says the same thing, but at training time.",
+  "start": 984.64,
+  "end": 988.54
+ },
+ {
+  "text": "In a normal transformer, information only flows up. A word goes in at the bottom floor. The thought climbs, floor by floor. At the top floor, it's used to pick the next word. Then the next word starts at the bottom again. The finished thought on the top floor never goes back down.",
+  "start": 988.88,
+  "end": 1004.14
+ },
+ {
+  "text": "Latent feedback changes one thing. It takes the top floor's finished thought from this word and hands it to the bottom floor for the next word. The lead author says it takes about four lines of code. It costs around 1.2 times more compute per token.",
+  "start": 1004.76,
+  "end": 1017.28
+ },
+ {
+  "text": "Is that worth it? The paper tests it in a fair fight. High-quality text is running out. When it does, we train on the same data again and again, and every repeat is worth less than the last. So if you have extra compute, do you spend it on latent feedback, or on one more pass over the same data?",
+  "start": 1017.66,
+  "end": 1032.82
+ },
+ {
+  "text": "Mostly yes. As long as each parameter has seen a decent amount of unique text, latent feedback wins. With the data fixed, it matches a normal transformer using up to 48 percent less compute. With the number of passes fixed, it matches it with up to 47 percent less unique data. They tested models from 60 million to 778 million parameters. One scaling law, fit on models up to 271 million, predicted the loss of the 778 million ones within 0.3 percent. And at serving time, you keep the same parameter count and the same memory cache.",
+  "start": 1033.44,
+  "end": 1065.42
+ },
+ {
+  "text": "There is a catch. When data is scarce for the model's size, it flips. At 12.5 unique tokens per parameter and two passes, latent feedback needed about 8 percent more compute. The authors say today's models are far from that zone. But these are small models. Plenty of ideas die at scale.",
+  "start": 1066.26,
+  "end": 1084.0
+ },
+ {
+  "text": "It's the same story as the reasoning paper. The model builds a rich thought, and then the usual setup throws it away.",
+  "start": 1084.64,
+  "end": 1090.3
+ },
+ {
+  "text": "Put the three papers together and you get a dial.",
+  "start": 1090.82,
+  "end": 1092.86
+ },
+ {
+  "text": "The question is how much of its thinking a model has to say out loud.",
+  "start": 1093.58,
+  "end": 1097.2
+ },
+ {
+  "text": "Turn it all the way left, and the model writes every thought. That's classic chain of thought. Turn it all the way right, and the model says nothing. It reads the question once and hands back chances. That's a decision model. Hybrid agents sit in the middle. Say what matters. Think the rest in silence.",
+  "start": 1098.0,
+  "end": 1112.6
+ },
+ {
+  "text": "Softmax is the gate every thought passes through to become a word. Paper one says the gate leaks, and the leak shows up when the model is most confident. Papers two and three say we push too much through it.",
+  "start": 1113.62,
+  "end": 1123.92
+ },
+ {
+  "text": "This next part is a guess, not a result. Many decision models are trained on soft labels from bigger teacher models. That is distillation. And distillation is exactly where the second bug lives: student chances and teacher chances that are almost equal. As far as I can tell, nobody has tested this. If you train small models from big teachers, it's worth an afternoon.",
+  "start": 1124.48,
+  "end": 1143.86
+ },
+ {
+  "text": "So what do you do on Monday?",
+  "start": 1144.48,
+  "end": 1145.46
+ },
+ {
+  "text": "One. Run the gradient test on your loss, in the precision you actually train in. The gradients should sum to zero.",
+  "start": 1146.2,
+  "end": 1151.7
+ },
+ {
+  "text": "Two. If you distill, feed in identical student and teacher scores. The gradient should be exactly zero.",
+  "start": 1152.26,
+  "end": 1158.3
+ },
+ {
+  "text": "Three. If you build agents, read the HybridAgent code. Just don't expect your serving stack to run it yet.",
+  "start": 1158.74,
+  "end": 1164.32
+ },
+ {
+  "text": "So much of this work is about making models think better. These papers are about the thinking we throw away.",
+  "start": 1164.32,
+  "end": 1170.42
+ },
+ {
+  "text": "One more thing.",
+  "start": 1171.04,
+  "end": 1171.8
+ },
+ {
+  "text": "That demo was one tiny example. It can't tell us how common this bug is in real training runs. Maybe your runs are clean. Maybe they're not.",
+  "start": 1172.3,
+  "end": 1180.58
+ },
+ {
+  "text": "So run the five-line test on your own loss, in the precision you train in. Then post your number in the comments. I want to know how common this bug is.",
+  "start": 1181.26,
+  "end": 1189.9
+ },
+ {
+  "text": "Softmax has been in every model for years, and we're still finding things wrong with it.",
+  "start": 1190.46,
+  "end": 1194.5
+ }
+]
