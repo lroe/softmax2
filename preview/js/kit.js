@@ -1000,39 +1000,11 @@ export function brace(ctx, x1, x2, y, o = {}) {
   });
 }
 
-// ---- texture --------------------------------------------------------------
+// ---- background -----------------------------------------------------------
 
-// One large noise tile, generated at 1:1 and repeated without scaling. The
-// backdrop cache is baked at the actual output pixel size so 2K/4K backgrounds
-// do not become soft blocks.
-let grainCanvas = null;
-export function makeGrain(size = 2048) {
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const g = c.getContext('2d');
-  const img = g.createImageData(c.width, c.height);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const v = Math.random() * 255;
-    img.data[i] = v;
-    img.data[i + 1] = v;
-    img.data[i + 2] = v;
-    img.data[i + 3] = Math.random() * 5;
-  }
-  g.putImageData(img, 0, 0);
-  grainCanvas = c;
-  return c;
-}
-
-export function drawGrain(ctx, alpha = 0.6) {
-  if (!grainCanvas) makeGrain();
-  const pat = ctx.createPattern(grainCanvas, 'repeat');
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = pat;
-  ctx.fillRect(0, 0, W, H);
-  ctx.restore();
-}
+// The master background is a flat fill. Do not add grain, dither, noise, or a
+// texture layer: YouTube's encoder turns low-amplitude noise into moving blocks
+// and banding. A clean flat field compresses better and looks calmer.
 
 let bgCache = null;
 let bgKey = '';
@@ -1043,16 +1015,9 @@ function buildBg(pw, ph) {
   c.height = ph;
   const g = c.getContext('2d');
 
-  // Flat Dracula night. No radial glow, no vignette, no circular bands.
+  // Flat Dracula night. No glow, vignette, grain, dither, or texture.
   g.fillStyle = C.bg;
   g.fillRect(0, 0, pw, ph);
-
-  if (!grainCanvas) makeGrain();
-  const pat = g.createPattern(grainCanvas, 'repeat');
-  g.globalAlpha = 0.6;
-  g.fillStyle = pat;
-  g.fillRect(0, 0, pw, ph);
-  g.globalAlpha = 1;
 
   bgCache = c;
   bgKey = `${pw}x${ph}`;

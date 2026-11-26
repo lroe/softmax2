@@ -5,7 +5,7 @@ This is the "something more" that sits on top of the visual style guide. It cove
 
 **Reference build:** `/home/jeevankumar/Videos/vision-encoder/preview`
 18:33 · 54 scenes · 1920×1080 · full narration sync · no MP4 render.
-The reference predates the 2K rule; reuse its pacing and scene logic, but build the backdrop and grain at 2560×1440+ (see §21).
+The reference predates the 2K rule; reuse its pacing and scene logic, but build the backdrop at 2560×1440+ and keep it a single flat fill — no grain or dither (see §21).
 
 If a project already has the older `skill.md`, read it for the Dracula palette and the general MinutePhysics vibe. This file is the production system that actually ships.
 
@@ -21,7 +21,7 @@ The output must feel like a hand-built motion piece, not a slideshow:
 - every scene has a base composition before its first cue;
 - diagrams evolve rather than cut from slide to slide;
 - the typography is large, quiet, and consistent;
-- the palette is Dracula dark, the background is flat `#282A36` with native-resolution grain only, the linework is ink-like, the motion is restrained;
+- the palette is Dracula dark, the background is a single flat `#282A36` fill with no grain or dither, the linework is ink-like, the motion is restrained;
 - the viewer always knows where to look;
 - the final frame is held long enough to read.
 
@@ -47,8 +47,8 @@ These are the rules that separate "good enough" from the reference quality.
 12. **Verify visually.** A clean console is not a finished video. Screenshot the beats and look at them.
 13. **No invented numbers.** Every value comes from the source. If there is no number, use a relative bar and label it as relative.
 14. **No full render by default.** A localhost preview is the deliverable. Stills are captured with query params.
-15. **Flat background only.** `#282A36` plus a single native-resolution grain layer. **No radial glow, no vignette, no circular background bands, no gradient washes, no drop shadows.** Smooth dark gradients band and macroblock on YouTube.
-16. **2K-native caches.** The backdrop, grain, and any texture cache must be baked at the actual output pixel size (`ctx.canvas.width × ctx.canvas.height`). Never bake 1920×1080 and stretch it. See §21.
+15. **Flat background only.** One `#282A36` fill. **No grain, no dither, no noise texture, no radial glow, no vignette, no circular background bands, no gradient washes, no drop shadows.** Grain and dither look fine locally, then YouTube's encoder turns them into moving blocks and banding. See §21.
+16. **2K-native caches.** The backdrop cache must be baked at the actual output pixel size (`ctx.canvas.width × ctx.canvas.height`). Never bake 1920×1080 and stretch it. See §21.
 17. **Pictures are flat line art, not gradient renders.** When a beat needs a picture, request one with a prompt; use transparent PNG, no gradients/glow/shadows/text. See §22.
 18. **The math should look like the math.** Use the actual curve/shape for a function (for softmax: score vs chance curve) rather than an abstract object the viewer has to decode. See §23.
 19. **No future-state leakage.** A value, label, result, chart, or object that belongs to a later cue must not be visible early — not even faintly. Ghost scaffolds are empty geometry only. If the viewer can read the conclusion at 20% alpha, it is leaked. See §11.4.
@@ -407,7 +407,7 @@ This is the part that made the reference feel expensive. It is not "a nice font"
 
 - **Space Grotesk** for everything that carries the idea: headlines, labels, values, chart numbers, card titles.
 - **Inter** for small supporting copy: explanations, axis labels, citations, secondary card text.
-- **Caveat** is optional. It was downloaded for the reference but **not used**. The hand-drawn feeling came from the linework and grain. A handwriting font can make a technical piece feel cute rather than crisp. Use it only for a deliberate annotation or a children's explainer.
+- **Caveat** is optional. It was downloaded for the reference but **not used**. The hand-drawn feeling came from the linework. A handwriting font can make a technical piece feel cute rather than crisp. Use it only for a deliberate annotation or a children's explainer.
 
 Load both as local `.woff2` files. No Google Fonts network dependency during playback.
 
@@ -567,7 +567,7 @@ function frame(now) {
 
 ### 9.5 Backdrop cache
 
-The background is **flat** `#282A36` plus one native-resolution grain layer. No radial glow, no vignette, no circular bands. Bake it at the actual output pixel size (`canvas.width × canvas.height`) and `drawImage` it per frame. Rebuild when the canvas size changes.
+The background is **one flat** `#282A36` fill. No grain, no dither, no noise texture, no radial glow, no vignette, no circular bands. Bake it at the actual output pixel size (`canvas.width × canvas.height`) and `drawImage` it per frame. Rebuild when the canvas size changes.
 
 ```js
 let bgCache = null, bgKey = '';
@@ -575,9 +575,6 @@ function buildBg(pw, ph) {
   const c = document.createElement('canvas'); c.width = pw; c.height = ph;
   const g = c.getContext('2d');
   g.fillStyle = C.bg; g.fillRect(0, 0, pw, ph);
-  const pat = g.createPattern(grainTile, 'repeat'); // 2048px tile, 1:1
-  g.globalAlpha = 0.6; g.fillStyle = pat; g.fillRect(0, 0, pw, ph);
-  g.globalAlpha = 1;
   bgCache = c; bgKey = `${pw}x${ph}`;
 }
 export function backdrop(ctx, pw = W, ph = H) {
@@ -586,6 +583,8 @@ export function backdrop(ctx, pw = W, ph = H) {
   ctx.drawImage(bgCache, 0, 0, W, H);
 }
 ```
+
+Do not add grain or dither to “fix” banding. It gives the encoder more to chew on and makes the artifacts worse. A flat field is the cleanest input.
 
 **Do not bake a 1920×1080 background and stretch it to 2K/4K.** That is exactly how the background turns soft while the text stays sharp. See §21 for the YouTube checks. A vignette is not baked and not drawn; the edges are the same flat color as the centre.
 
@@ -769,12 +768,12 @@ h′ = h + F(h) + m · dF(h)
 - an animated switch for `m` shows 1/0;
 - no underbraces unless you measure them; a three-chip legend is clearer.
 
-### 10.10 Grain only (no vignette)
+### 10.10 Flat fill only (no grain, no dither)
 
-- Grain: a **2048×2048** noise tile, generated at 1:1, alpha ~1.0–1.5% effective, repeated without scaling. Never scale a 360px tile to 2K/4K.
-- Background: flat `#282A36` + native grain. **No radial glow, no vignette, no circular bands, no gradient wash.**
+- Background: one flat `#282A36` fill. **No grain, no dither, no noise texture, no radial glow, no vignette, no circular bands, no gradient wash.**
+- Grain and dither survive the local master and then turn into moving blocks and banding after YouTube's VP9/AV1 encode.
 - Every cache is baked at the actual output pixel size (`ctx.canvas.width × ctx.canvas.height`).
-- No gradients in UI shapes, illustrations, charts, or the backdrop. The only exception is none. Flat fills only.
+- No gradients in UI shapes, illustrations, charts, or the backdrop. Flat fills only.
 
 ### 10.11 Softmax curve
 
@@ -1224,11 +1223,11 @@ Read the on-screen text as a viewer, not as the author:
 - **Focus audit:** list every visible text block in the frame. If a beat has more than two, remove one. No corner-label + bottom-caption hooks.
 - **Hook audit:** the first scene must have one anchor and attached labels only. No bottom caption while two other labels are competing.
 
-### 14.9 2K background / grain check
+### 14.9 2K background check
 
 - Capture a 2K still (`scale=1.333`) and a 4K still (`scale=2`); inspect the background at 100%.
-- The background must be flat `#282A36` with pixel-level grain. No circular bands, no radial glow, no vignette, no gradient wash.
-- The grain must be the same scale as the output pixels; if it looks like 2–3px blobs, the cache/tile is being scaled.
+- The background must be one flat `#282A36` value: no grain, no dither, no noise, no circular bands, no radial glow, no vignette, no gradient wash.
+- If you can see texture or dither, remove it. The local master may look “filmic”; YouTube will turn it into blocks.
 - The backdrop cache must match `canvas.width × canvas.height`; resize/fullscreen must rebuild it.
 - A 1080p still is not evidence that the 2K background is clean.
 
@@ -1249,7 +1248,7 @@ Read the on-screen text as a viewer, not as the author:
 
 ## 15. Performance rules
 
-1. **Bake the background at output resolution.** Flat `#282A36` + native grain into one offscreen canvas sized `ctx.canvas.width × ctx.canvas.height`; no glow, no vignette.
+1. **Bake the background at output resolution.** One flat `#282A36` fill into an offscreen canvas sized `ctx.canvas.width × ctx.canvas.height`; no grain, no dither, no glow, no vignette.
 2. **Draw only when needed.** `playing || dirty`.
 3. **Throttle DOM UI.** ~8 Hz, not 60.
 4. **2K/4K internal resolution.** Design at 1920×1080, render at 2560×1440 minimum; cap at 4096 px on the long edge unless a 4K master is requested.
@@ -1291,9 +1290,9 @@ These are real bugs from the reference build. Put them in the checklist.
 23. **A scene's last reveal needs a hold.** If the next scene starts immediately, the viewer never reads it.
 24. **Do not put the final answer on screen before the narration says it.** The voiceover carries the suspense.
 25. **A static hero shot is a skip risk.** A 4px sine drift is not motion. Use a push-in plus a focus/scan motif in the first 2s; lock onto the subject on the word that introduces it.
-26. **Circular radial glows and vignettes band on YouTube.** They are not “atmosphere”; they are compression noise. Flat background + native grain only.
+26. **Grain, dither, radial glows, and vignettes band on YouTube.** They are not “atmosphere”; they are compression noise. Use one flat fill only.
 27. **A 1080p backdrop stretched to 2K/4K is soft.** Build the cache at the output pixel size; check the background separately at 1:1.
-28. **A 360px grain tile scaled to 2K/4K becomes soft clumps.** Use a full-canvas or 2048px tile at 1:1.
+28. **Grain and dither look worse after YouTube re-encode.** Low-amplitude noise becomes moving blocks and smears. Do not add a noise layer to “fix” banding; remove it.
 29. **Three-corner hooks lose the viewer.** Corner labels + center object + bottom caption = no focal point. Attach labels to the anchor; cut the bottom caption.
 30. **A phone-shaped slot is not a softmax visualization.** Use the score→chance curve; the gate is a metaphor, not the function.
 31. **Text below 36px is not “secondary”; it is unreadable on a phone.** Cut it or move it to narration.
@@ -1316,8 +1315,8 @@ A video is done when all of these are true:
 - [ ] Every on-screen label is **≥36px** at 1080p (secondary 36–44, key 48–56, headline 72–80).
 - [ ] Every label is horizontal and readable on a phone.
 - [ ] No scene title at the top-left; no three-corner hook.
-- [ ] Background is flat `#282A36` + native grain; no gradients, radial glows, vignettes, or circular bands.
-- [ ] Backdrop and grain caches are baked at output resolution.
+- [ ] Background is one flat `#282A36` fill: no grain, no dither, no gradients, radial glows, vignettes, or circular bands.
+- [ ] Backdrop cache is baked at output resolution.
 - [ ] Every picture slot has a flat line-art asset or a clean vector fallback.
 - [ ] No text overflow or overlap at 1080p design / 2K render.
 - [ ] Every scene has a base state at t=0.
@@ -1330,7 +1329,7 @@ A video is done when all of these are true:
 - [ ] Timeline gap check: 0 gaps.
 - [ ] Contact sheet of all scene midpoints reviewed.
 - [ ] Portrait mobile player does not overflow.
-- [ ] 2K still checked at 100%: flat background, pixel-level grain, no circular bands.
+- [ ] 2K still checked at 100%: flat background, no grain/dither, no circular bands.
 - [ ] Hook has one focal zone; axis labels sit beside axes; no bottom caption competing.
 - [ ] No future-state leakage: no later label, value, chart, object, or result is readable at scene start or before its cue.
 - [ ] No camera reset at a cut; shared-object continuations keep the same transform or stay static.
@@ -1367,8 +1366,8 @@ Non-negotiables:
 - every reveal keyed to a phrase with at()
 - 54-ish scenes, 10-40s each, with ghost scaffolds
 - Space Grotesk + Inter, fixed 1080p ramp, no on-screen text below 36px
-- flat #282A36 background + native grain; zero gradients, radial glows, vignettes, or circular bands
-- 2K-native backdrop and grain caches
+- flat #282A36 background, no grain/dither; zero gradients, radial glows, vignettes, or circular bands
+- 2K-native backdrop cache
 - one focal zone; no corner-label + bottom-caption hooks
 - pictures are flat line art, no gradients/glow; ask the user for a prompt when an asset is needed
 - Dracula palette, semantic accent colors
@@ -1450,21 +1449,21 @@ That is the “more”. Keep the rules. Keep the holds. Keep the quiet. Look at 
 - Design on the fixed 1920×1080 grid. Render at **2560×1440 minimum** (and up to 3840×2160 when the CSS size and device pixel ratio justify it).
 - Build the backdrop at `ctx.canvas.width × ctx.canvas.height`, never at 1920×1080 and then stretched. An upscaled 1080p backdrop is the first thing YouTube turns into soft blocks.
 - Foreground vectors can look sharp while the background is soft. That is the tell. Inspect the background separately at 1:1.
-- Any texture, pattern, or noise layer must match the output pixel grid.
+- Do not add texture, pattern, noise, grain, or dither to the backdrop. A flat fill is both cleaner and cheaper to encode.
 - Rebuild the backdrop cache when the canvas size changes (resize/fullscreen/capture scale).
 
-**Grain is required, but native.**
+**No grain, no dither.**
 
-- A fine static grain over the flat Dracula background dithers dark areas and prevents banding.
-- Generate the grain at 1:1 with output pixels. Use a full-canvas noise layer or a 2048px tile; never scale a 360px tile to 2K/4K.
-- Keep it subtle, roughly 1–2% effective opacity. More grain costs bitrate and shimmers after re-encode.
-- **No large radial glows or vignettes.** Smooth dark gradients are the worst case for VP9/AV1: they band and macroblock. Flat `#282A36` + native grain is the safe background.
+- The master background is one flat `#282A36` fill. No grain, no dither, no noise texture, no pattern.
+- Grain and dither look fine in the local master; YouTube's VP9/AV1 encoder turns low-amplitude noise into moving blocks, smears, and banding, especially in dark fields.
+- A flat fill compresses cleanly and holds at 1440p/4K. “Film grain” is not worth the artifacts.
+- **No large radial glows or vignettes.** Smooth dark gradients are the worst case for VP9/AV1: they band and macroblock. A flat field is the safe background.
 - No circular background blobs, no decorative auras, no “atmosphere” rings.
 
 **Delivery checks**
 
-- Render a 2K still, zoom to 100%, and confirm the grain is pixel-level, not 2–3px blobs, and the background is flat with no circular bands.
-- Export a clean master; avoid an unnecessary JPEG generation. Keep 4:2:0 only at the final encode; use CRF 16–18 for grain-heavy 1440p, not 20+.
+- Render a 2K still, zoom to 100%, and confirm the background is one flat value: no grain, dither, noise, circular bands, or radial glow.
+- Export a clean master; avoid unnecessary JPEG generations. Use CRF 16–18 for clean 1440p.
 - Upload at 1440p or higher and wait for processing. Check YouTube → **Stats for nerds**: confirm 1440p, VP9/AV1, healthy bitrate.
 - Validate with a 10–15s test upload before committing to a full 18-minute render. Dark-background artifacts are easier to see on YouTube than in the local master.
 - The laptop master, the upload, and YouTube playback are three different encodes. Judge the background on YouTube at 100% zoom, not from a downscaled screenshot.

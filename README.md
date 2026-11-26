@@ -59,9 +59,10 @@ preview/
     scenes/              eleven scene files, 78 scenes
 ```
 
-The background is flat `#282A36` with a native-resolution grain layer. There are no
-radial glows, vignettes, circular bands, or gradients. Backdrop and grain caches are
-baked at the actual output size.
+The background is a single flat `#282A36` fill. There is no grain, dither, noise
+texture, radial glow, vignette, circular band, or gradient. The backdrop cache is
+baked at the actual output size. Grain and dither were removed because YouTube's
+encoder turns low-amplitude noise into moving blocks and banding.
 
 Pictures are drawn as flat vector line art in the kit (`singer`, `deskRobot`,
 `silentAgent`, `painting`), so the video has no bitmap dependency. If a generated
@@ -72,7 +73,7 @@ rules live in `skill_original.md` §22.
 
 - 78 scenes, 0 timeline gaps, end 1194.88 s.
 - Full-timeline draw sweep: 0 errors.
-- 2K master: 2560×1440 backing store; flat background + pixel-level grain; no circular bands.
+- 2K master: 2560×1440 backing store; single flat background, no grain/dither, no circular bands.
 - Hook: one softmax curve with adjacent axis labels; no corner-label/bottom-caption scatter.
 - Key 2K stills reviewed in `shots/qa/`; the earlier full midpoint pass was used during QA.
 - Type: primary labels 30–56 px at 1080p; axis/tertiary 24–28 px; hero 64–250 px.
