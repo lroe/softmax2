@@ -30,9 +30,7 @@ const q = {
 
   test: at('one test in the second paper', 11),
   real: at('real or just filler', 11),
-  table: at('show you the table', 11),
   zero: at('start from zero', 12),
-  loop: at('without seeing the loop', 12),
 };
 
 // ---------------------------------------------------------------- 05
@@ -331,78 +329,70 @@ const eight = {
   id: 's08-table-teaser',
   title: 'The test, and the loop',
   start: start(11) + 0.36,
-  end: 98.0,
+  end: 98.8,
   draw(ctx, t) {
-    const tableA = 1 - p(t, q.zero, 0.5);
+    const tableA = 1 - p(t, q.zero, 0.3);
     const rowA = p(t, q.test, 0.6);
     const realA = p(t, q.real, 0.6);
-    const arrowA = p(t, q.table, 0.55);
-    const zeroA = p(t, q.zero + 0.1, 0.7);
-    const loopA = p(t, q.loop, 0.8);
+    const zeroA = p(t, q.zero + 0.3, 0.55);
+    const loopA = p(t, q.zero + 0.4, 0.55);
 
     if (tableA > 0.001) {
       ctx.save();
       ctx.globalAlpha = tableA;
       const x = 540;
-      const y = 300;
+      const y = 350;
       const w = 840;
-      const h = 360;
+      const h = 260;
       card(ctx, x, y, w, h, {
         fill: C.surface, stroke: 'rgba(248,248,242,0.16)', r: 18,
         accent: M.thought, accentW: 3,
       });
-      text(ctx, 'test', x + 46, y + 76, { size: 32, weight: 500, color: C.muted });
-      text(ctx, 'result', x + w - 46, y + 76, {
-        size: 32, weight: 500, color: C.muted, align: 'right',
+      text(ctx, 'test', x + 46, y + 64, { size: 36, weight: 500, color: C.muted });
+      text(ctx, 'result', x + w - 46, y + 64, {
+        size: 36, weight: 500, color: C.muted, align: 'right',
       });
-      line(ctx, x + 46, y + 104, x + w - 46, y + 104, {
+      line(ctx, x + 46, y + 92, x + w - 46, y + 92, {
         color: 'rgba(248,248,242,0.14)', width: 1.2, rough: 0,
       });
 
-      // Three ghost rows; one is the test that matters.
-      const rows = [
-        { label: 'content of the thought', key: 1 },
-        { label: 'noise', key: 0 },
-        { label: 'random words', key: 0 },
-      ];
-      rows.forEach((r, i) => {
-        const yy = y + 160 + i * 66;
-        const a = rowA * (i === 0 ? 1 : 0.22);
-        text(ctx, r.label, x + 46, yy, {
-          size: 34, weight: 400, color: i === 0 ? C.fg : C.dim, alpha: a,
-        });
-        text(ctx, '?', x + w - 76, yy, {
-          size: 38, weight: 400, color: i === 0 ? M.thought : C.dim,
-          alpha: a, align: 'center',
-        });
+      // One row. No future comparison rows, no duplicate question marks.
+      const yy = y + 158;
+      text(ctx, 'content of the thought', x + 46, yy, {
+        size: 36, weight: 400, color: C.fg, alpha: rowA,
+      });
+      text(ctx, '?', x + w - 76, yy, {
+        size: 40, weight: 400, color: M.thought, alpha: rowA, align: 'center',
       });
       if (rowA > 0.01) {
-        rr(ctx, x + 28, y + 130, w - 56, 66, 10);
+        ctx.save();
+        ctx.globalAlpha *= rowA;
+        rr(ctx, x + 28, y + 124, w - 56, 68, 10);
         ctx.strokeStyle = 'rgba(189,147,249,0.45)';
         ctx.lineWidth = 1.6;
         ctx.setLineDash([7, 7]);
         ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.restore();
       }
 
+      // One question line under the table, with no dots or extra labels.
       if (realA > 0.001) {
-        tag(ctx, x + 76, y + h + 58, 'real thinking?', {
-          color: M.correct, alpha: realA, size: 30,
+        const lineY = y + h + 64;
+        const rw = measure(ctx, 'real thinking?', 36, 400, F.display, 0);
+        const ow = measure(ctx, 'or', 36, 400, F.display, 0);
+        const fw = measure(ctx, 'filler?', 36, 400, F.display, 0);
+        const gap = 18;
+        let qx = 960 - (rw + ow + fw + gap * 2) / 2;
+        text(ctx, 'real thinking?', qx, lineY, {
+          size: 36, weight: 400, color: M.correct, alpha: realA,
         });
-        text(ctx, 'or', x + 330, y + h + 58, {
-          size: 30, color: C.dim, alpha: realA, align: 'center',
+        qx += rw + gap;
+        text(ctx, 'or', qx + ow / 2, lineY, {
+          size: 36, weight: 400, color: C.dim, alpha: realA, align: 'center',
         });
-        tag(ctx, x + 420, y + h + 58, 'filler?', {
-          color: M.bug, alpha: realA, size: 30,
-        });
-      }
-
-      if (arrowA > 0.001) {
-        line(ctx, 1430, 300, 1430, 220, {
-          color: 'rgba(248,248,242,0.3)', width: 1.6, alpha: arrowA, rough: 0.2,
-        });
-        tag(ctx, 1430, 200, 'the table', {
-          color: C.muted, alpha: arrowA, size: 30, align: 'right',
+        qx += ow + gap;
+        text(ctx, 'filler?', qx, lineY, {
+          size: 36, weight: 400, color: M.bug, alpha: realA,
         });
       }
       ctx.restore();
@@ -427,22 +417,23 @@ const eight = {
       const xs = [420, 690, 960, 1230, 1500];
       ctx.save();
       ctx.globalAlpha = loopA * 0.95;
+      // Reveal the whole strip together, so the last word is not still
+      // appearing when the scene cuts.
       steps.forEach((s, i) => {
-        const e = p(t, q.loop + 0.1 + i * 0.09, 0.4);
         text(ctx, s, xs[i], 780, {
           size: 36, weight: 500, color: i === 2 ? M.gate : C.muted,
-          align: 'center', alpha: loopA * e,
+          align: 'center',
         });
-        if (i < steps.length - 1 && e > 0.3) {
+        if (i < steps.length - 1) {
           arrow(ctx, xs[i] + 62, 764, xs[i + 1] - 62, 764, {
-            color: 'rgba(248,248,242,0.28)', width: 1.8, progress: e, head: 8,
+            color: 'rgba(248,248,242,0.28)', width: 1.8, progress: loopA, head: 8,
           });
         }
       });
       // return arrow: feed back to think
       arrow(ctx, 1500, 840, 430, 840, {
         color: 'rgba(248,248,242,0.24)', width: 1.6,
-        progress: p(t, q.loop + 0.55, 0.7), head: 9,
+        progress: p(t, q.zero + 0.7, 0.55), head: 9,
       });
       ctx.restore();
     }

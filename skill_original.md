@@ -185,7 +185,7 @@ Good:
 
 If the next scene is **exactly the same layout**, do not add a camera move that cannot be continuous. Static continuity is better than a reset.
 
-**Do not crossfade identical layouts.** The renderer fades the previous scene out while fading the new scene in. When both scenes draw the same axes, curve, or card at the same coordinates, the fade double-draws the geometry: the line gets darker for ~0.24s, then settles. That brightness pulse reads as another glitch. Mark the incoming scene `hardCut: true` so the renderer skips the crossfade and cuts on one frame. The frames are identical, so the cut is invisible.
+**Do not crossfade identical layouts — or incompatible dense ones.** The renderer fades the previous scene out while fading the new scene in. When both scenes draw the same axes, curve, or card at the same coordinates, the fade double-draws the geometry: the line gets darker for ~0.24s, then settles. That brightness pulse reads as another glitch. The same problem happens when an outgoing full-width strip overlaps an incoming diagram: for ~0.24s the viewer sees both layouts on top of each other. Mark the incoming scene `hardCut: true` so the renderer skips the crossfade and cuts on one frame. Identical frames make the cut invisible; a summary-to-detail cut is clean when the outgoing frame has had its full read time.
 
 ```js
 // scene that continues the exact same layout
@@ -608,6 +608,7 @@ if (prev && scene.hardCut !== true && t - scene.start < fade) {
 - No wipes, no flashy zooms, no rotations.
 - Do not expose an empty background for more than ~0.2s.
 - If the incoming scene continues the **identical layout**, set `hardCut: true`. A crossfade would double-draw the shared axes/curve and pulse its brightness. A hard cut between identical frames is invisible. See §4.3.
+- Also set `hardCut: true` when the outgoing scene ends on a full-width strip or table and the incoming scene starts with a dense diagram. A crossfade stacks the two layouts for ~0.24s; a hard cut does not.
 
 ### 9.7 Capture mode
 
@@ -839,6 +840,7 @@ This order prevents the “empty then crowded” failure mode:
 - **Morph/move:** interpolate position/scale with `easeInOut` over 0.8–1.2s.
 - **Dim:** alpha 1→0.35–0.55 over 0.4s when the focus moves.
 - **No typewriter text. No blur-in. No 3D flips. No bouncing logos. No per-scene zoom reset.** If the next scene shares the same object, carry the camera state or cut without a camera move.
+- **Summary strips need a hold.** Reveal a list or five-step strip as a group, not one item at a time. After the last item is visible, give it at least `1.0s + 0.4s × items` (five items → 3.0s) before the cut. If the narration is faster than that, move the reveal earlier or extend the scene boundary; do not animate the last word into the final second.
 
 ### 11.4 Ghost scaffolds — empty geometry only
 
@@ -1217,6 +1219,7 @@ Read the on-screen text as a viewer, not as the author:
 - Does any scene have a title-like header that is not the actual content? Remove it.
 - **Future-state audit:** at start + 0.4 and at every beat, is any later label/value/object visible? Faint ghost text counts. Remove it or delay it.
 - **Camera continuity:** does any push-in/pan reset at a cut? If the next scene continues the same object, either carry the transform or remove the move. A snap-back is a bug.
+- **Read-time audit:** for every list, table, or five-step strip, note when the last item becomes fully visible and when the scene cuts. Is the settled hold at least `1.0s + 0.4s × items`? If not, reveal earlier, group the items, or extend the scene. A viewer cannot read a word that appears 0.6s before a cut.
 - **Silent-agent case:** only question + agent + character at the start; loop on “thinking in silence”; tool on “needs a tool”; bars on “beat frontier models”; ½ on “half as many tokens.”
 - **Focus audit:** list every visible text block in the frame. If a beat has more than two, remove one. No corner-label + bottom-caption hooks.
 - **Hook audit:** the first scene must have one anchor and attached labels only. No bottom caption while two other labels are competing.
@@ -1299,7 +1302,7 @@ These are real bugs from the reference build. Put them in the checklist.
 34. **A ghost chart or ghost stat reveals the conclusion early.** This is the silent-agent failure: ghost benchmark bars and a ghost ≈½ appeared before their words. Remove the content; keep only empty tracks/frames.
 35. **A candidate word set appears before the pick.** In the scores→chances→one-word scene, showing dog/sat/the/a and the 'chances'/'one word' labels at the 'scores' beat gives the viewer four concepts at once and reveals the answer set before the pick. Show scores only; add the curve on 'softmax'; add the chosen word on 'picks'; add the discarded words on 'throws.'
 36. **The camera resets at a scene cut.** A 4.5% push-in in the hook followed by a 1.0-scale continuation is a snap-back. Carry the camera state or remove the move; if the next scene is the same layout, keep it static.
-37. **A crossfade pulses identical geometry.** Fading between two scenes that draw the same axes or curve at the same coordinates double-draws them for the fade duration. The line brightens, then settles. Use `hardCut: true` on the incoming scene. A hard cut between identical frames is invisible; a crossfade is not.
+37. **A crossfade pulses identical geometry — or stacks two dense layouts.** Fading between scenes that draw the same axes or curve double-draws them; the line brightens, then settles. Fading from a full-width strip into a dense diagram shows both at once. Use `hardCut: true` when either happens. A hard cut between identical frames is invisible; a summary-to-detail cut is clean after the summary has had its hold.
 
 ---
 
@@ -1332,6 +1335,8 @@ A video is done when all of these are true:
 - [ ] No future-state leakage: no later label, value, chart, object, or result is readable at scene start or before its cue.
 - [ ] No camera reset at a cut; shared-object continuations keep the same transform or stay static.
 - [ ] Identical-layout cuts use `hardCut: true`; no crossfade brightness pulse on shared geometry.
+- [ ] Summary strips hold for at least `1.0s + 0.4s × items` after the last item is visible; no item animates into the final second.
+- [ ] Teaser tables show one row, not the whole future dataset; no redundant pointer label.
 - [ ] README explains how to run, controls, stills, and the fact that no MP4 was rendered.
 - [ ] Server is running on localhost; the URL is verified.
 
@@ -1587,3 +1592,84 @@ At this beat the narration has only introduced **scores**. The viewer sees four 
 - The viewer should never see the right side of the frame before the narration introduces it.
 
 Use this case when a scene has three stages. If all three stages are visible at once, it is a dashboard, not an explainer.
+
+
+---
+
+## 25. Case study: the table teaser
+
+**Bad frame (the one that prompted this rule):**
+
+- a `test / result` table with three rows: `content of the thought`, `noise`, `random words`;
+- a dashed box around the first row;
+- a `?` in every result cell;
+- two bottom tags, `real thinking?` and `filler?`, each with its own dot;
+- a separate `the table` label in the top-right corner with a leader line.
+
+The narration at this point is only introducing **one test**. The viewer sees three tests, four question marks, a corner label, and a two-option question. That is a dashboard, not a teaser. Two of the rows (`noise`, `random words`) belong to the results beat almost fourteen minutes later, so they are also future-state leakage.
+
+**Good frame:**
+
+- one table card, `test / result`, one separator;
+- one row: `content of the thought` + a single `?`;
+- one question line under the table: `real thinking? or filler?`;
+- no corner pointer, no duplicate dots, no future rows.
+
+**Timing:**
+
+- card at scene start;
+- row on “one test”;
+- question on “real, or just filler”;
+- table fades before “let's start from zero”;
+- the replacement statement and loop strip get the rest of the scene.
+
+**Rules this teaches:**
+
+- A teaser shows **one row**, not the whole future dataset.
+- A question mark is not content; one is enough.
+- Do not label an object with its own name (`the table`) and a leader line. The viewer already sees the table. Remove the pointer.
+- Future comparison rows are future-state leakage even at low alpha. Keep them for their own beat.
+- If the frame has more than two text blocks plus the main object, remove one.
+
+---
+
+## 26. Case study: the five-step recap
+
+**Bad frame (the one that prompted this rule):**
+
+- `think → score → chances → pick → feed` along the bottom;
+- the first four words reveal at 96.4–96.8s;
+- `feed` is still fading in around 97.0s;
+- the scene cuts at 98.0s.
+
+`feed` gets less than one second of settled time. The viewer is still reading when the next scene starts. The narration is not the problem; the reveal is. The strip was animated one item at a time, starting from the last cue of the idea, so the last item landed almost on the cut.
+
+**Good frame:**
+
+- the same five words, revealed together;
+- the whole strip visible by 95.4s;
+- the scene holds until 98.8s;
+- a hard cut to the detailed loop, so the strip does not overlap the incoming diagram.
+
+Settled hold: `98.8 − 95.4 = 3.4s` for five items. That clears the `1.0 + 0.4 × 5 = 3.0s` budget.
+
+**Rules this teaches:**
+
+- Reveal a summary list as a **group**. Stagger the words only if the last one still lands at least 1.5s before the cut.
+- Start the summary at the **first** cue of the idea, not the last. A five-word strip needs about three seconds, not one.
+- Budget: `hold = scene.end − last_item_visible`; require `hold ≥ 1.0s + 0.4s × items`.
+- If the hold is short, move the scene boundary. Extending `end` by 0.8s is cheaper than narrating a list the viewer cannot read.
+- Use `hardCut: true` when the strip hands off to a dense diagram. A crossfade stacks the strip on top of the new layout for 0.24s.
+
+**Minimal pattern:**
+
+```js
+// reveal all items on one cue
+const stripA = p(t, q.start, 0.55);
+steps.forEach((step, i) => {
+  text(ctx, step, xs[i], 780, { alpha: stripA });
+  if (i < steps.length - 1) {
+    arrow(ctx, xs[i] + 62, 764, xs[i + 1] - 62, 764, { progress: stripA });
+  }
+});
+```
