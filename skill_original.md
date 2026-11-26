@@ -1672,3 +1672,19 @@ steps.forEach((step, i) => {
   }
 });
 ```
+
+
+---
+
+## 29. 2K Colab render
+
+The preview is still the source of truth. When a file is needed, `render_2k_colab.ipynb` renders the same canvas at **2560×1440** on Colab.
+
+- Ask for Google Drive access before writing anything.
+- Clone `main` from GitHub; remove `skill.md` / `skill_original.md` from the runtime and never copy them to Drive.
+- Drive output: `MyDrive/Softmax2K/` with `chunks/`, `stills/`, `logs/`, `render_state.json`, and the final MP4.
+- Render in 600-frame chunks. Encode each chunk with x264, copy it to Drive, then delete the local PNG frames.
+- Keep a `render_state.json` so a disconnected runtime can resume without re-rendering finished chunks.
+- Stream `@@RENDER@@` JSON events from the Node renderer into a Colab `tqdm` bar: frame count, chunk, fps, ETA.
+- The renderer is `render/render-2k.mjs`; it uses Playwright against the live preview, not a separate video framework.
+- No GPU. The final file is video-only chunks plus the narration WAV, muxed with AAC.

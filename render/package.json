@@ -1,0 +1,8 @@
+{
+  "name": "softmax-2k-render",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "1.65.1"
+  }
+}

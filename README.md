@@ -2,7 +2,8 @@
 
 A word-synced animated explainer built from `script.txt` and `audio.wav`.
 It is authored on a 1920×1080 grid and rendered at **2560×1440 (2K)** minimum.
-The deliverable is the **localhost preview**, not an MP4.
+The primary deliverable is the **localhost preview**. The optional Colab notebook
+renders a **2560×1440 MP4** to Google Drive when you need a file.
 The production playbook is **`skill_original.md`**.
 
 ## Run
@@ -31,6 +32,23 @@ http://localhost:4173/preview/?capture=1&t=153&scale=2       # 3840×2160
 ```
 
 In capture mode the player chrome is hidden.
+
+## Colab 2K render
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/lroe/softmax2/blob/main/render_2k_colab.ipynb)
+
+The notebook clones this repo at the latest `main`, renders the live canvas at
+**2560×1440** with headless Chromium, and writes resumable chunks plus the final
+MP4 to **Google Drive**. It asks for Drive permission before writing anything.
+
+- Output: `MyDrive/Softmax2K/softmax-2560x1440.mp4`
+- Resume: finished 600-frame chunks are skipped
+- Progress: frame count, chunk, speed, and ETA stream live
+- `skill.md` / `skill_original.md` are removed from the Colab runtime and are
+  never copied to Drive
+
+The renderer is `render/render-2k.mjs`. It drives the existing preview with
+Playwright, not a separate video framework.
 
 ## What is synced to what
 
@@ -81,4 +99,4 @@ rules live in `skill_original.md` §22.
 - QA art: `shots/qa/` (2560×1440 key stills + one 3840×2160 hook still) and `shots/mobile_*.png`.
 - Narration only. No music, no SFX.
 
-No MP4 was rendered.
+No MP4 was rendered locally; the optional Colab notebook produces one on Drive.
