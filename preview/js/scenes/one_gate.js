@@ -1,6 +1,5 @@
 import {
-  C, F, W, H, clamp, lerp, p, enter, easeOutCubic, card, text, line, arrow,
-  strokePath, underline, measure, icon,
+  C, F, p, enter, card, text, line, arrow, strokePath, measure,
 } from '../kit.js';
 import {
   M, tag, chip, statement, heroNumber, gate, leak, flow, pathFlow, paperCard,
@@ -48,14 +47,8 @@ const one = {
   start: start(1),
   end: start(2),
   draw(ctx, t) {
-    const u = t - one.start;
-    const cam = 1 + 0.045 * easeOutCubic(clamp(u / 4.8));
-    ctx.save();
-    ctx.translate(W / 2, H / 2);
-    ctx.scale(cam, cam);
-    ctx.translate(-W / 2, -H / 2);
-
-    // One anchor: the actual score -> chance curve. Labels attach to the axes.
+    // No per-scene camera push. The hook's motion is the curve itself, so the
+    // next scene can cut in with the identical layout and no zoom reset.
     softmaxCurve(ctx, 380, 330, 1160, 520, {
       alpha: 1,
       axesAlpha: 0.45 + 0.55 * p(t, 0.1, 0.6),
@@ -69,8 +62,6 @@ const one = {
       labelAlpha: p(t, q.softmax, 0.55),
       labelSize: 78,
     });
-
-    ctx.restore();
   },
 };
 

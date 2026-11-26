@@ -52,6 +52,7 @@ These are the rules that separate "good enough" from the reference quality.
 17. **Pictures are flat line art, not gradient renders.** When a beat needs a picture, request one with a prompt; use transparent PNG, no gradients/glow/shadows/text. See §22.
 18. **The math should look like the math.** Use the actual curve/shape for a function (for softmax: score vs chance curve) rather than an abstract object the viewer has to decode. See §23.
 19. **No future-state leakage.** A value, label, result, chart, or object that belongs to a later cue must not be visible early — not even faintly. Ghost scaffolds are empty geometry only. If the viewer can read the conclusion at 20% alpha, it is leaked. See §11.4.
+20. **No camera reset at a cut.** A push-in, pull-back, or pan is a sequence-level move, not a scene-level decoration. If the next scene continues the same object, either carry the camera transform across the boundary or remove the move. If the next scene is the identical layout, do not animate a camera at all. A reset zoom is a visible glitch.
 
 ---
 
@@ -166,6 +167,23 @@ The recognizable shape of softmax is a **curve**, not a phone-shaped slot, a glo
 - The curve is the anchor. The word `softmax` attaches to the curve; axis labels sit beside their axes.
 - A gate may be used later as a metaphor for the boundary between thought and speech, but it must never replace the curve when the narration is explaining the function itself.
 - No gradients, no glow, no circular aura around the curve. See §23 for the full case study.
+
+### 4.3 Camera continuity
+
+A camera move is a property of a **sequence**, not of a single scene.
+
+Bad:
+
+- scene 1 pushes in 4.5% over five seconds;
+- scene 2 continues the same curve, but starts at 1.0;
+- at the cut, the whole frame snaps back out. The viewer reads it as a glitch, not a transition.
+
+Good:
+
+- carry the camera transform across the boundary (the next scene starts at the previous scene's final scale/offset), or
+- remove the push-in and let the object animation carry the shot.
+
+If the next scene is **exactly the same layout**, do not add a camera move that cannot be continuous. Static continuity is better than a reset.
 
 ---
 
@@ -812,7 +830,7 @@ This order prevents the “empty then crowded” failure mode:
 - **Bar grow:** width/height from 0 to value over 0.6–0.9s.
 - **Morph/move:** interpolate position/scale with `easeInOut` over 0.8–1.2s.
 - **Dim:** alpha 1→0.35–0.55 over 0.4s when the focus moves.
-- **No typewriter text. No blur-in. No 3D flips. No bouncing logos.**
+- **No typewriter text. No blur-in. No 3D flips. No bouncing logos. No per-scene zoom reset.** If the next scene shares the same object, carry the camera state or cut without a camera move.
 
 ### 11.4 Ghost scaffolds — empty geometry only
 
@@ -1190,6 +1208,7 @@ Read the on-screen text as a viewer, not as the author:
 - Does the final state hold long enough?
 - Does any scene have a title-like header that is not the actual content? Remove it.
 - **Future-state audit:** at start + 0.4 and at every beat, is any later label/value/object visible? Faint ghost text counts. Remove it or delay it.
+- **Camera continuity:** does any push-in/pan reset at a cut? If the next scene continues the same object, either carry the transform or remove the move. A snap-back is a bug.
 - **Silent-agent case:** only question + agent + character at the start; loop on “thinking in silence”; tool on “needs a tool”; bars on “beat frontier models”; ½ on “half as many tokens.”
 - **Focus audit:** list every visible text block in the frame. If a beat has more than two, remove one. No corner-label + bottom-caption hooks.
 - **Hook audit:** the first scene must have one anchor and attached labels only. No bottom caption while two other labels are competing.
@@ -1271,6 +1290,7 @@ These are real bugs from the reference build. Put them in the checklist.
 33. **A missing picture must never show a broken box.** Fall back to vector art or omit the slot until the asset arrives.
 34. **A ghost chart or ghost stat reveals the conclusion early.** This is the silent-agent failure: ghost benchmark bars and a ghost ≈½ appeared before their words. Remove the content; keep only empty tracks/frames.
 35. **A candidate word set appears before the pick.** In the scores→chances→one-word scene, showing dog/sat/the/a and the 'chances'/'one word' labels at the 'scores' beat gives the viewer four concepts at once and reveals the answer set before the pick. Show scores only; add the curve on 'softmax'; add the chosen word on 'picks'; add the discarded words on 'throws.'
+36. **The camera resets at a scene cut.** A 4.5% push-in in the hook followed by a 1.0-scale continuation is a snap-back. Carry the camera state or remove the move; if the next scene is the same layout, keep it static.
 
 ---
 
@@ -1301,6 +1321,7 @@ A video is done when all of these are true:
 - [ ] 2K still checked at 100%: flat background, pixel-level grain, no circular bands.
 - [ ] Hook has one focal zone; axis labels sit beside axes; no bottom caption competing.
 - [ ] No future-state leakage: no later label, value, chart, object, or result is readable at scene start or before its cue.
+- [ ] No camera reset at a cut; shared-object continuations keep the same transform or stay static.
 - [ ] README explains how to run, controls, stills, and the fact that no MP4 was rendered.
 - [ ] Server is running on localhost; the URL is verified.
 
