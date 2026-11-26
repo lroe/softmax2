@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, gate, leak, flow, pathFlow, thoughtRow, wordPill,
-  relativeBar, axes, lossCurve, stat, MONO,
+  relativeBar, axes, lossCurve, stat, deskRobot, MONO,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -140,21 +140,25 @@ const twenty = {
 
     // Ghost axes.
     axes(ctx, 330, 420, 1180, 360, {
-      alpha: base * 0.8, xLabel: 'training', yLabel: 'loss', size: 28,
+      alpha: base * 0.8, xLabel: 'training', yLabel: 'loss', size: 36,
     });
 
     // Tiny addition model.
     card(ctx, 190, 220, 380, 150, {
       fill: C.surface, stroke: 'rgba(248,248,242,0.15)', r: 18, alpha: (0.2 + 0.8 * modelA) * 0.9,
     });
-    text(ctx, 'a tiny model', 226, 274, {
+    deskRobot(ctx, 200, 232, 0.95, {
+      alpha: 0.2 + 0.8 * modelA,
+      accent: M.logits,
+    });
+    text(ctx, 'a tiny model', 342, 274, {
       size: 32, weight: 400, color: C.muted, alpha: 0.2 + 0.8 * modelA,
     });
-    text(ctx, 'A + B', 226, 344, {
+    text(ctx, 'A + B', 342, 344, {
       size: 58, weight: 500, color: C.fg, alpha: 0.2 + 0.8 * modelA, ls: -1,
     });
     tag(ctx, 590, 260, 'a famous test', {
-      color: C.dim, alpha: p(t, q.famous, 0.6) * 0.9, size: 28,
+      color: C.dim, alpha: p(t, q.famous, 0.6) * 0.9, size: 36,
     });
 
     // Two-phase loss curve: memorize, plateau, then the drop.
@@ -182,7 +186,7 @@ const twenty = {
       });
     }
 
-    text(ctx, 'schematic', 1510, 790, { size: 24, color: C.dim, align: 'right', alpha: base * 0.7 });
+    text(ctx, 'schematic', 1510, 800, { size: 30, color: C.dim, align: 'right', alpha: base * 0.7 });
 
     if (grokA > 0.001) {
       text(ctx, 'grokking', 1500, 900, {
@@ -214,7 +218,7 @@ const twentyOne = {
     const ideasA = p(t, q.twoIdeas, 0.6);
 
     axes(ctx, 300, 300, 1150, 440, {
-      alpha: base * 0.8, xLabel: 'training', yLabel: 'loss', size: 28,
+      alpha: base * 0.8, xLabel: 'training', yLabel: 'loss', size: 36,
     });
 
     if (curveA < 0.98) {

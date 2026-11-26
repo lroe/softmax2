@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, heroNumber, gate, leak, flow, pathFlow, paperCard,
-  scoreList, thoughtRow, wordPill, stat,
+  scoreList, thoughtRow, wordPill, stat, softmaxCurve, silentAgent,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -55,92 +55,19 @@ const one = {
     ctx.scale(cam, cam);
     ctx.translate(-W / 2, -H / 2);
 
-    const base = p(t, q.every + 0.1, 0.8);
-    const open = 0.08 + 0.92 * p(t, 0.75, 1.05);
-    const stream = p(t, 0.65, 1.1);
-    const labelA = p(t, q.softmax, 0.55);
-
-    // A faint field of model instances, far behind the gate.
-    const dotsA = base * 0.22;
-    if (dotsA > 0.001) {
-      ctx.save();
-      ctx.globalAlpha = dotsA;
-      for (let i = 0; i < 48; i++) {
-        const col = i % 12;
-        const row = Math.floor(i / 12);
-        const x = 250 + col * 30 + (row % 2) * 12;
-        const y = 250 + row * 32;
-        ctx.fillStyle = i % 7 === 0 ? C.cyan : C.dim;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    // Gate first, then the streams so the dots meet its slit.
-    gate(ctx, 960, 470, 300, 470, {
-      alpha: base, open, accent: M.gate, label: null,
-    });
-
-    // Focus brackets and one scan pass: a camera finding the function.
-    const focusA = p(t, 0.2, 0.5);
-    const contract = p(t, q.softmax, 0.8);
-    if (focusA > 0.001) {
-      const pad = 32 - 10 * contract;
-      const bx = 960 - 150 - pad;
-      const by = 470 - 235 - pad;
-      const bw = 300 + pad * 2;
-      const bh = 470 + pad * 2;
-      const len = 34;
-      const col = 'rgba(139,233,253,0.4)';
-      const segs = [
-        [[bx, by + len], [bx, by], [bx + len, by]],
-        [[bx + bw - len, by], [bx + bw, by], [bx + bw, by + len]],
-        [[bx, by + bh - len], [bx, by + bh], [bx + len, by + bh]],
-        [[bx + bw - len, by + bh], [bx + bw, by + bh], [bx + bw, by + bh - len]],
-      ];
-      segs.forEach((pts) => strokePath(ctx, pts, {
-        color: col, width: 2, alpha: focusA, progress: 1, rough: 0,
-      }));
-    }
-    const scan = p(t, 0.7, 1.5);
-    if (scan > 0.001 && scan < 1) {
-      const sy = 250 + 420 * scan;
-      line(ctx, 830, sy, 1090, sy, {
-        color: 'rgba(139,233,253,0.25)', width: 2, rough: 0,
-        alpha: Math.sin(scan * Math.PI) * 0.9,
-      });
-    }
-
-    // Left stream: scores. Right stream: chances.
-    flow(ctx, 230, 470, 942, 470, {
-      n: 16, color: M.logits, alpha: stream, progress: 1, t, size: 4.2,
-      spread: 38, speed: 0.09, seed: 2,
-    });
-    flow(ctx, 978, 470, 1690, 470, {
-      n: 16, color: M.gate, alpha: stream, progress: 1, t, size: 4.2,
-      spread: 38, speed: 0.09, seed: 5,
-    });
-
-    const la = p(t, q.runs, 0.6);
-    tag(ctx, 240, 388, 'scores', { color: M.logits, alpha: la * 0.9, size: 32 });
-    tag(ctx, 1680, 388, 'chances', { color: M.gate, alpha: la * 0.9, size: 32, align: 'right' });
-
-    if (labelA > 0.001) {
-      text(ctx, 'softmax', 960, 786, {
-        size: 58, weight: 500, color: C.fg, align: 'center', alpha: labelA, ls: 0.2,
-      });
-      const w = measure(ctx, 'softmax', 58, 500, F.display, 0.2);
-      underline(ctx, 960 - w / 2, 806, w, {
-        color: M.gate, width: 3, alpha: labelA * 0.9, progress: p(t, q.softmax + 0.1, 0.5),
-      });
-    }
-
-    // A single quiet caption, revealed on "one function".
-    text(ctx, 'every model runs through it', 960, 900, {
-      size: 34, weight: 400, color: C.muted, align: 'center',
-      alpha: p(t, q.runs + 0.15, 0.7) * 0.9,
+    // One anchor: the actual score -> chance curve. Labels attach to the axes.
+    softmaxCurve(ctx, 380, 330, 1160, 520, {
+      alpha: 1,
+      axesAlpha: 0.45 + 0.55 * p(t, 0.1, 0.6),
+      curveProgress: 0.08 + 0.92 * p(t, 0.1, 1.7),
+      marker: 0.72,
+      markerAlpha: p(t, 2.28, 0.6),
+      projectionAlpha: p(t, 2.55, 0.7),
+      axisLabels: true,
+      axisSize: 38,
+      label: 'softmax',
+      labelAlpha: p(t, q.softmax, 0.55),
+      labelSize: 78,
     });
 
     ctx.restore();
@@ -156,45 +83,35 @@ const two = {
   end: start(4),
   draw(ctx, t) {
     const zeroIn = p(t, start(3) + 0.15, 0.7);
-    const gateA = 1 - p(t, start(3) + 0.05, 0.55);
+    const curveA = 1 - p(t, start(3) + 0.05, 0.55);
     const crack = p(t, q.bug - 0.15, 0.7);
-    const leakA = p(t, q.bug + 0.35, 0.9);
 
-    // Gate phase: the standard version, then a crack.
-    if (gateA > 0.001) {
+    // Curve phase: the same object from the hook, now with a fissure.
+    if (curveA > 0.001) {
       ctx.save();
-      ctx.globalAlpha = gateA;
-      gate(ctx, 960, 470, 300, 470, {
-        alpha: 1, open: 1, accent: M.gate, label: null, crack,
-      });
-      text(ctx, 'softmax', 960, 786, {
-        size: 58, weight: 500, color: C.fg, align: 'center',
-      });
-      const w = measure(ctx, 'softmax', 58, 500, F.display, 0.2);
-      underline(ctx, 960 - w / 2, 806, w, { color: M.gate, width: 3, alpha: 0.9 });
-
-      flow(ctx, 230, 470, 942, 470, {
-        n: 14, color: M.logits, alpha: 0.8, progress: 1, t, size: 4.2, spread: 38,
-        speed: 0.09, seed: 2,
-      });
-      flow(ctx, 978, 470, 1690, 470, {
-        n: 14, color: gateA > 0.5 ? M.gate : M.bug, alpha: 0.8, progress: 1, t,
-        size: 4.2, spread: 38, speed: 0.09, seed: 5,
-      });
-
-      text(ctx, 'the standard version', 960, 900, {
-        size: 34, weight: 400, color: C.dim, align: 'center',
-        alpha: p(t, q.standard, 0.6) * 0.95,
+      ctx.globalAlpha = curveA;
+      softmaxCurve(ctx, 380, 330, 1160, 520, {
+        alpha: 1,
+        axesAlpha: 1,
+        curveProgress: 1,
+        marker: 0.72,
+        markerAlpha: 1,
+        projectionAlpha: 1,
+        axisLabels: true,
+        axisSize: 38,
+        label: 'softmax',
+        labelAlpha: 1,
+        labelSize: 78,
+        crack,
       });
 
       if (crack > 0.01) {
-        text(ctx, 'a bug', 1210, 350, {
-          size: 46, weight: 500, color: M.bug, alpha: p(t, q.bug, 0.5),
+        text(ctx, 'a bug', 1510, 330, {
+          size: 52, weight: 500, color: M.bug, alpha: p(t, q.bug, 0.5),
         });
-        line(ctx, 1200, 370, 1090, 410, {
-          color: M.bug, width: 1.8, alpha: p(t, q.bug, 0.5) * 0.7, rough: 0.3,
+        line(ctx, 1490, 352, 1380, 382, {
+          color: M.bug, width: 2, alpha: p(t, q.bug, 0.5) * 0.75, rough: 0.3,
         });
-        leak(ctx, 1120, 700, { progress: leakA, alpha: 0.9 });
       }
       ctx.restore();
     }
@@ -205,7 +122,7 @@ const two = {
       ctx.globalAlpha = zeroIn;
 
       text(ctx, 'best learning signal', 960, 300, {
-        size: 36, weight: 400, color: C.muted, align: 'center',
+        size: 38, weight: 400, color: C.muted, align: 'center',
         alpha: p(t, q.best, 0.6) * 0.95,
       });
 
@@ -220,7 +137,7 @@ const two = {
       ctx.restore();
 
       text(ctx, 'gradient on the right word', 960, 688, {
-        size: 36, weight: 400, color: C.muted, align: 'center',
+        size: 38, weight: 400, color: C.muted, align: 'center',
         alpha: p(t, q.best + 0.25, 0.6) * 0.95,
       });
 
@@ -231,10 +148,10 @@ const two = {
         const mx = 300;
         const mw = 1320;
         text(ctx, 'confidence', mx, 748, {
-          size: 32, weight: 400, color: C.muted, alpha: meterA,
+          size: 36, weight: 400, color: C.muted, alpha: meterA,
         });
         text(ctx, '100%', mx + mw, 748, {
-          size: 32, weight: 500, color: M.logits, align: 'right', alpha: meterA * fill,
+          size: 36, weight: 500, color: M.logits, align: 'right', alpha: meterA * fill,
         });
         card(ctx, mx, 764, mw, 12, {
           fill: 'rgba(248,248,242,0.08)', stroke: null, r: 6, alpha: meterA,
@@ -245,7 +162,7 @@ const two = {
           });
           if (fill > 0.95) {
             tag(ctx, mx + mw, 714, 'most sure', {
-              color: M.logits, align: 'right', alpha: p(t, q.sure + 1.0, 0.5), size: 30,
+              color: M.logits, align: 'right', alpha: p(t, q.sure + 1.0, 0.5), size: 36,
             });
           }
         }
@@ -253,19 +170,19 @@ const two = {
 
       // Framework chips.
       const labels = ['JAX', 'PyTorch', 'TensorFlow', 'textbooks'];
-      const size = 34;
-      const widths = labels.map((l) => measure(ctx, l, size, 500, F.display, 0.2) + 40);
+      const size = 36;
+      const widths = labels.map((l) => measure(ctx, l, size, 500, F.display, 0.2) + 44);
       const gap = 18;
       const total = widths.reduce((s, w) => s + w, 0) + gap * (labels.length - 1);
       let cx = 960 - total / 2;
-      text(ctx, 'the bug lives in', 960, 844, {
-        size: 30, weight: 400, color: C.dim, align: 'center',
+      text(ctx, 'the bug lives in', 960, 846, {
+        size: 36, weight: 400, color: C.muted, align: 'center',
         alpha: p(t, q.jax - 0.4, 0.6),
       });
       labels.forEach((l, i) => {
         const e = enter(t, q.jax + i * 0.42, 0.55, 0, 12);
         if (e.a > 0.001) {
-          chip(ctx, cx, 904, l, {
+          chip(ctx, cx, 910, l, {
             size, color: i === 3 ? M.bug : C.fg,
             border: i === 3 ? 'rgba(255,85,85,0.5)' : 'rgba(248,248,242,0.22)',
             bg: 'rgba(49,51,66,0.6)', alpha: e.a,
@@ -319,8 +236,9 @@ const three = {
       accent: M.thought, accentW: 4, alpha: base,
     });
     text(ctx, 'agent', 646, 468, { size: 42, weight: 500, color: C.fg, alpha: base });
-    text(ctx, 'thinks', 646, 522, { size: 32, weight: 400, color: M.thought, alpha: base });
-    text(ctx, 'speaks', 646, 566, { size: 32, weight: 400, color: M.word, alpha: base });
+    text(ctx, 'thinks', 646, 522, { size: 36, weight: 400, color: M.thought, alpha: base });
+    text(ctx, 'speaks', 646, 566, { size: 36, weight: 400, color: M.word, alpha: base });
+    silentAgent(ctx, 958, 600, 1.0, { alpha: base, accent: M.thought });
     tag(ctx, 1016, 430, 'Stanford', {
       color: C.dim, alpha: p(t, q.stanford, 0.6) * 0.9, size: 26, align: 'right',
     });

@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, gate, leak, flow, pathFlow, scoreList, thoughtRow,
-  wordPill, stat, axes, lossCurve,
+  wordPill, stat, axes, lossCurve, softmaxCurve,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -45,29 +45,23 @@ const five = {
   draw(ctx, t) {
     const base = p(t, q.connected - 0.1, 0.8);
     const scoresA = p(t, q.twoThings, 0.6);
-    const chancesA = p(t, q.scores, 0.6);
+    const chancesA = p(t, q.scores, 0.7);
     const pickA = p(t, q.picks, 0.55);
     const throwA = p(t, q.throws, 0.7);
     const dim = 1 - 0.55 * throwA;
 
-    // Ghost gate anchors the frame.
-    gate(ctx, 980, 492, 250, 400, {
-      alpha: base * 0.9, open: 0.15 + 0.85 * chancesA, accent: M.gate, label: null,
-    });
+    // Ghost scores and curve anchor the frame.
     if (scoresA < 0.99) {
-      const gh = base * 0.32 * (1 - scoresA);
-      tag(ctx, 200, 318, 'scores', { color: M.logits, alpha: gh, size: 32 });
-      tag(ctx, 1160, 318, 'chances', { color: M.gate, alpha: gh, size: 32 });
-      tag(ctx, 1520, 318, 'one word', { color: M.word, alpha: gh, size: 32 });
+      const gh = base * 0.28 * (1 - scoresA);
+      tag(ctx, 200, 318, 'scores', { color: M.logits, alpha: gh, size: 36 });
+      tag(ctx, 840, 330, 'chances', { color: M.gate, alpha: gh, size: 36 });
+      tag(ctx, 1520, 318, 'one word', { color: M.word, alpha: gh, size: 36 });
       scoreList(ctx, 200, 372, 600, [
         { label: 'cat', value: 8.2 }, { label: 'dog', value: 1.1 },
         { label: 'sat', value: -2.4 }, { label: 'the', value: -4.9 },
       ], {
         max: 10, alpha: gh, progress: 0.7, rowH: 56, gap: 14,
-        labelSize: 36, valueSize: 34, zeroFrac: 0.56, halfFrac: 0.42,
-      });
-      text(ctx, 'softmax', 980, 780, {
-        size: 56, weight: 500, color: C.fg, align: 'center', alpha: gh,
+        labelSize: 36, valueSize: 36, zeroFrac: 0.56, halfFrac: 0.42,
       });
       card(ctx, 1398, 448, 120, 64, {
         fill: 'rgba(49,51,66,0.2)', stroke: 'rgba(255,184,108,0.28)', r: 32,
@@ -76,7 +70,7 @@ const five = {
     }
 
     // Left: scores.
-    tag(ctx, 200, 318, 'scores', { color: M.logits, alpha: scoresA * 0.95, size: 32 });
+    tag(ctx, 200, 318, 'scores', { color: M.logits, alpha: scoresA * 0.95, size: 36 });
     if (scoresA > 0.001) {
       const rows = [
         { label: 'cat', value: 8.2 },
@@ -86,50 +80,47 @@ const five = {
       ];
       scoreList(ctx, 200, 372, 600, rows, {
         max: 10, alpha: scoresA, progress: p(t, q.twoThings + 0.1, 0.7),
-        rowH: 56, gap: 14, labelSize: 36, valueSize: 34,
+        rowH: 56, gap: 14, labelSize: 36, valueSize: 36,
         zeroFrac: 0.56, halfFrac: 0.42,
       });
     }
 
-    // The gate label arrives on "softmax".
-    text(ctx, 'softmax', 980, 780, {
-      size: 56, weight: 500, color: C.fg, align: 'center',
+    // Center: the actual softmax curve.
+    tag(ctx, 840, 330, 'chances', { color: M.gate, alpha: chancesA * 0.95, size: 36 });
+    softmaxCurve(ctx, 840, 390, 300, 260, {
+      alpha: base * 0.95,
+      axesAlpha: 0.22 + 0.78 * chancesA,
+      curveProgress: chancesA,
+      marker: 0.72,
+      markerAlpha: pickA,
+      projectionAlpha: pickA,
+      axisLabels: false,
+      compact: true,
+    });
+    text(ctx, 'softmax', 990, 720, {
+      size: 44, weight: 500, color: C.fg, align: 'center',
       alpha: p(t, q.scores, 0.55),
     });
-    const w = measure(ctx, 'softmax', 56, 500, F.display, 0.2);
-    underline(ctx, 980 - w / 2, 800, w, {
+    const w = measure(ctx, 'softmax', 44, 500, F.display, 0.2);
+    underline(ctx, 990 - w / 2, 738, w, {
       color: M.gate, width: 3, alpha: p(t, q.scores, 0.55) * 0.9,
     });
 
-    // The chance band leaving the gate.
-    if (chancesA > 0.001) {
-      tag(ctx, 1160, 318, 'chances', { color: M.gate, alpha: chancesA * 0.95, size: 32 });
-      for (let i = 0; i < 5; i++) {
-        const h = [82, 54, 40, 30, 22][i];
-        const qq = p(t, q.scores + 0.15 + i * 0.06, 0.5);
-        if (qq <= 0) continue;
-        const x = 1120 + i * 34;
-        const y = 492 - h / 2;
-        rr(ctx, x, y + (1 - qq) * 12, 24, h * qq, 5);
-        ctx.fillStyle = M.gate;
-        ctx.globalAlpha = chancesA * qq * (0.9 - i * 0.12);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-
     // The pick.
     if (pickA > 0.001) {
-      tag(ctx, 1520, 318, 'one word', { color: M.word, alpha: pickA * 0.95, size: 32 });
-      wordPill(ctx, 1400, 450, 'cat', { alpha: pickA, size: 42 });
+      tag(ctx, 1520, 318, 'one word', { color: M.word, alpha: pickA * 0.95, size: 36 });
+      wordPill(ctx, 1400, 450, 'cat', { alpha: pickA, size: 44 });
       ctx.save();
       ctx.globalAlpha = pickA;
       ctx.fillStyle = M.correct;
       ctx.beginPath();
-      ctx.arc(1514, 432, 7, 0, Math.PI * 2);
+      ctx.arc(1518, 432, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      tag(ctx, 1400, 540, 'picked', { color: M.correct, alpha: pickA * 0.9, size: 28 });
+      tag(ctx, 1400, 546, 'picked', { color: M.correct, alpha: pickA * 0.9, size: 36 });
+      arrow(ctx, 1150, 500, 1376, 500, {
+        color: 'rgba(248,248,242,0.3)', width: 2, progress: pickA, head: 10,
+      });
     }
 
     // Everything else is thrown away.
@@ -138,21 +129,16 @@ const five = {
       const e = enter(t, q.twoThings + 0.2 + i * 0.07, 0.5, 0, 10);
       if (e.a <= 0.001) return;
       const drift = throwA * (26 + i * 9);
-      text(ctx, w2, 1160 + i * 100, 640 + drift, {
-        size: 34, weight: 400, color: C.muted,
+      text(ctx, w2, 1160 + i * 100, 660 + drift, {
+        size: 36, weight: 400, color: C.muted,
         alpha: e.a * (1 - throwA * 0.82) * dim,
       });
     });
     if (throwA > 0.001) {
-      tag(ctx, 1160, 726, 'thrown away', {
-        color: M.bug, alpha: throwA * 0.9, size: 30,
+      tag(ctx, 1160, 746, 'thrown away', {
+        color: M.bug, alpha: throwA * 0.9, size: 36,
       });
     }
-
-    // A single connecting line from the gate to the pick.
-    arrow(ctx, 1120, 492, 1378, 492, {
-      color: 'rgba(248,248,242,0.30)', width: 2, progress: pickA, head: 10,
-    });
   },
 };
 

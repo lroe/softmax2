@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, gate, flow, pathFlow, thoughtRow, wordPill,
-  relativeBar, probList, stat,
+  relativeBar, probList, stat, softmaxCurve,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -599,12 +599,18 @@ const nineteen = {
     arrow(ctx, 766, 420, 816, 420, {
       color: 'rgba(248,248,242,0.32)', width: 1.8, progress: base, head: 8,
     });
-    gate(ctx, 884, 420, 120, 160, {
-      alpha: base, open: 1, accent: M.gate,
-      glow: softA > 0.2 ? 18 : 0,
+    softmaxCurve(ctx, 824, 350, 120, 160, {
+      alpha: base,
+      axesAlpha: 0.3,
+      curveProgress: 1,
+      marker: 0.72,
+      markerAlpha: 0.8,
+      projectionAlpha: 0.6,
+      axisLabels: false,
+      compact: true,
     });
-    text(ctx, 'softmax', 884, 540, {
-      size: 28, weight: 400, color: softA > 0.2 ? M.gate : C.muted, align: 'center',
+    text(ctx, 'softmax', 884, 544, {
+      size: 36, weight: 400, color: softA > 0.2 ? M.gate : C.muted, align: 'center',
       alpha: base,
     });
     arrow(ctx, 948, 420, 1012, 420, {
@@ -640,10 +646,10 @@ const nineteen = {
       }
       ctx.restore();
       text(ctx, 'softmax', 884, 308, {
-        size: 30, weight: 500, color: M.bug, align: 'center', alpha: pinA * 0.95,
+        size: 36, weight: 500, color: M.bug, align: 'center', alpha: pinA * 0.95,
       });
       text(ctx, 'the pick', 1110, 338, {
-        size: 30, weight: 500, color: M.bug, align: 'center', alpha: pinA * 0.95,
+        size: 36, weight: 500, color: M.bug, align: 'center', alpha: pinA * 0.95,
       });
     }
 

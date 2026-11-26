@@ -123,12 +123,8 @@ export function gate(ctx, cx, cy, w = 220, h = 360, o = {}) {
   ctx.clip();
   ctx.fillStyle = '#171821';
   ctx.fillRect(cx - sw / 2, sy, sw, sh);
-  // vertical glow inside the slit
-  const grad = ctx.createLinearGradient(cx - sw / 2, 0, cx + sw / 2, 0);
-  grad.addColorStop(0, 'rgba(139,233,253,0)');
-  grad.addColorStop(0.5, 'rgba(139,233,253,0.22)');
-  grad.addColorStop(1, 'rgba(139,233,253,0)');
-  ctx.fillStyle = grad;
+  // Flat slit wash. No gradient, no glow.
+  ctx.fillStyle = 'rgba(139,233,253,0.10)';
   ctx.fillRect(cx - sw / 2, sy, sw, sh);
   ctx.restore();
 
@@ -321,6 +317,320 @@ export function relativeBar(ctx, x, y, w, h, frac, o = {}) {
   rr(ctx, x, y, ww, h, Math.min(6, h / 2));
   ctx.fillStyle = color;
   ctx.globalAlpha = alpha * 0.9 * dim;
+  ctx.fill();
+  ctx.restore();
+}
+
+
+// The actual softmax shape: score on x, chance on y. One curve, one mapping.
+export function softmaxCurve(ctx, x, y, w, h, o = {}) {
+  const {
+    alpha = 1, axesAlpha = 1, curveProgress = 1, color = M.gate,
+    scoreColor = M.logits, chanceColor = M.gate,
+    label = null, labelAlpha = 0, labelSize = 72,
+    marker = 0.72, markerAlpha = 1, projectionAlpha = 1,
+    axisLabels = true, axisSize = 36, crack = 0, crackAlpha = 1,
+    compact = false,
+  } = o;
+  if (alpha <= 0.001) return;
+  const x0 = x;
+  const y0 = y;
+  const x1 = x + w;
+  const y1 = y + h;
+  const pad = compact ? 0 : 8;
+
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+
+  // Axes: one horizontal, one vertical. No box, no grid.
+  line(ctx, x0, y1, x1, y1, {
+    color: 'rgba(248,248,242,0.34)', width: 2.2, alpha: axesAlpha, rough: 0,
+  });
+  line(ctx, x0, y0, x0, y1, {
+    color: 'rgba(248,248,242,0.34)', width: 2.2, alpha: axesAlpha, rough: 0,
+  });
+  for (let i = 1; i <= 3; i++) {
+    const fx = x0 + (w * i) / 4;
+    const fy = y1 - (h * i) / 4;
+    line(ctx, fx, y1, fx, y1 + 8, {
+      color: 'rgba(248,248,242,0.25)', width: 1.4, alpha: axesAlpha, rough: 0,
+    });
+    line(ctx, x0, fy, x0 - 8, fy, {
+      color: 'rgba(248,248,242,0.25)', width: 1.4, alpha: axesAlpha, rough: 0,
+    });
+  }
+
+  // Sigmoid curve.
+  const pts = [];
+  const n = 72;
+  for (let i = 0; i <= n; i++) {
+    const f = i / n;
+    const p = 1 / (1 + Math.exp(-7.5 * (f - 0.5)));
+    pts.push([x0 + f * w, y1 - p * h]);
+  }
+  strokePath(ctx, pts, {
+    color, width: compact ? 3 : 4, alpha: 1, progress: curveProgress, rough: 0.35,
+  });
+
+  // The mapping: score on x -> curve -> chance on y.
+  if (markerAlpha > 0.001) {
+    const f = clamp(marker);
+    const my = y1 - (1 / (1 + Math.exp(-7.5 * (f - 0.5)))) * h;
+    const mx = x0 + f * w;
+    if (projectionAlpha > 0.001) {
+      strokePath(ctx, [[mx, y1], [mx, my], [x0, my]], {
+        color: 'rgba(248,248,242,0.36)', width: 1.6, alpha: projectionAlpha,
+        progress: 1, rough: 0, dash: [7, 8],
+      });
+    }
+    ctx.save();
+    ctx.globalAlpha *= markerAlpha;
+    ctx.fillStyle = scoreColor;
+    ctx.beginPath();
+    ctx.arc(mx, y1, compact ? 6 : 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = chanceColor;
+    ctx.beginPath();
+    ctx.arc(x0, my, compact ? 6 : 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Axis labels sit next to their axes, never in the far corners.
+  if (axisLabels) {
+    text(ctx, 'score', x0 + w / 2, y1 + axisSize * (compact ? 1.4 : 1.6), {
+      size: axisSize, weight: 400, color: scoreColor, align: 'center', alpha: axesAlpha,
+    });
+    text(ctx, 'chance', x0 - (compact ? 14 : 20), y0 + axisSize * 0.8, {
+      size: axisSize, weight: 400, color: chanceColor, align: 'right', alpha: axesAlpha,
+    });
+  }
+
+  // The name attaches to the curve, not to a scene corner.
+  if (label && labelAlpha > 0.001) {
+    const lx = x0 + w * (compact ? 0.52 : 0.58);
+    const ly = y0 - (compact ? 18 : 34);
+    text(ctx, label, lx, ly, {
+      size: labelSize, weight: 500, color: C.fg, align: 'center', alpha: labelAlpha, ls: -1,
+    });
+  }
+
+  // A fissure for the "standard version has a bug" beat.
+  if (crack > 0.001) {
+    const f = 0.84;
+    const cx = x0 + f * w;
+    const cy = y1 - (1 / (1 + Math.exp(-7.5 * (f - 0.5)))) * h;
+    const pts2 = [
+      [cx - 30, cy + 44], [cx - 8, cy + 18], [cx + 10, cy + 30],
+      [cx + 22, cy - 2], [cx + 8, cy - 22], [cx + 34, cy - 44],
+    ];
+    strokePath(ctx, pts2, {
+      color: 'rgba(255,85,85,0.35)', width: 8, alpha: crack * crackAlpha * 0.7,
+      progress: crack, rough: 0.4,
+    });
+    strokePath(ctx, pts2, {
+      color: M.bug, width: 3, alpha: crack * crackAlpha, progress: crack, rough: 0.6,
+    });
+  }
+
+  ctx.restore();
+  return { x0, y0, x1, y1 };
+}
+
+
+// ------------------------------------------------------------------ people / pictures
+
+// A single simple singer at a microphone. Flat line art, no gradients.
+export function singer(ctx, x, y, s = 1, o = {}) {
+  const { color = C.fg, accent = M.logits, alpha = 1, pose = 'neutral' } = o;
+  if (alpha <= 0.001) return;
+  s = s * 1;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(2.6, 3.2 * s);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Head, neck, torso, legs.
+  ctx.beginPath();
+  ctx.arc(x, y - 86 * s, 12 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  // eyes
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x - 4 * s, y - 88 * s, 1.5 * s, 0, Math.PI * 2);
+  ctx.arc(x + 4 * s, y - 88 * s, 1.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+  // body
+  ctx.beginPath();
+  ctx.moveTo(x, y - 74 * s);
+  ctx.lineTo(x, y - 30 * s);
+  ctx.moveTo(x, y - 30 * s);
+  ctx.lineTo(x - 13 * s, y);
+  ctx.moveTo(x, y - 30 * s);
+  ctx.lineTo(x + 13 * s, y);
+  ctx.stroke();
+
+  // Left arm, right arm toward the mic.
+  const handY = pose === 'confident' ? -55 : pose === 'hesitant' ? -34 : -44;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 62 * s);
+  ctx.lineTo(x - 18 * s, y - 40 * s);
+  ctx.moveTo(x, y - 62 * s);
+  ctx.lineTo(x + 18 * s, y + handY * s);
+  ctx.stroke();
+
+  // Mic stand.
+  const mx = x + 27 * s;
+  ctx.strokeStyle = 'rgba(248,248,242,0.65)';
+  ctx.beginPath();
+  ctx.moveTo(mx, y + 6 * s);
+  ctx.lineTo(mx, y - 55 * s);
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  rr(ctx, mx - 5 * s, y - 66 * s, 10 * s, 17 * s, 5 * s);
+  ctx.fill();
+  ctx.restore();
+}
+
+// A small desk robot doing addition cards. Flat line art, no gradients.
+export function deskRobot(ctx, x, y, s = 1, o = {}) {
+  const { color = C.fg, accent = M.logits, alpha = 1 } = o;
+  if (alpha <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(2.2, 3 * s);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Desk.
+  ctx.beginPath();
+  ctx.moveTo(x + 4 * s, y + 94 * s);
+  ctx.lineTo(x + 138 * s, y + 94 * s);
+  ctx.moveTo(x + 18 * s, y + 94 * s);
+  ctx.lineTo(x + 12 * s, y + 116 * s);
+  ctx.moveTo(x + 124 * s, y + 94 * s);
+  ctx.lineTo(x + 130 * s, y + 116 * s);
+  ctx.stroke();
+
+  // Head + antenna.
+  rr(ctx, x + 38 * s, y + 8 * s, 52 * s, 34 * s, 9 * s);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 64 * s, y + 8 * s);
+  ctx.lineTo(x + 64 * s, y - 2 * s);
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.arc(x + 64 * s, y - 5 * s, 4 * s, 0, Math.PI * 2);
+  ctx.fill();
+  // Eyes.
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x + 54 * s, y + 25 * s, 2.5 * s, 0, Math.PI * 2);
+  ctx.arc(x + 74 * s, y + 25 * s, 2.5 * s, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body, legs, arms.
+  rr(ctx, x + 48 * s, y + 50 * s, 34 * s, 30 * s, 6 * s);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 52 * s, y + 80 * s);
+  ctx.lineTo(x + 50 * s, y + 94 * s);
+  ctx.moveTo(x + 78 * s, y + 80 * s);
+  ctx.lineTo(x + 80 * s, y + 94 * s);
+  ctx.moveTo(x + 48 * s, y + 58 * s);
+  ctx.lineTo(x + 28 * s, y + 74 * s);
+  ctx.moveTo(x + 82 * s, y + 58 * s);
+  ctx.lineTo(x + 102 * s, y + 70 * s);
+  ctx.stroke();
+
+  // Two addition cards with dots (no numbers, no text).
+  const cards = [
+    { cx: x + 104 * s, cy: y + 64 * s, dots: 2 },
+    { cx: x + 126 * s, cy: y + 78 * s, dots: 3 },
+  ];
+  cards.forEach((c) => {
+    rr(ctx, c.cx - 12 * s, c.cy - 9 * s, 24 * s, 18 * s, 3 * s);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    for (let i = 0; i < c.dots; i++) {
+      const ox = (i % 2) * 8 * s - 4 * s;
+      const oy = Math.floor(i / 2) * 8 * s - 4 * s;
+      ctx.beginPath();
+      ctx.arc(c.cx + ox, c.cy + oy, 2.2 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+
+// A calm bean agent with a silent thought bubble and a small tool.
+export function silentAgent(ctx, x, y, s = 1, o = {}) {
+  const { color = C.fg, accent = M.thought, alpha = 1 } = o;
+  if (alpha <= 0.001) return;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(2.2, 3 * s);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Thought bubble: dotted outline, three cells, no words.
+  rr(ctx, x - 34 * s, y - 152 * s, 88 * s, 50 * s, 18 * s);
+  ctx.setLineDash([5 * s, 7 * s]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(x + 2 * s, y - 96 * s, 5 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  for (let i = 0; i < 3; i++) {
+    rr(ctx, x - 18 * s + i * 20 * s, y - 136 * s, 12 * s, 18 * s, 3 * s);
+    ctx.fill();
+  }
+  ctx.fillStyle = color;
+
+  // Head, body, legs.
+  ctx.beginPath();
+  ctx.arc(x, y - 78 * s, 13 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x - 4 * s, y - 80 * s, 1.6 * s, 0, Math.PI * 2);
+  ctx.arc(x + 4 * s, y - 80 * s, 1.6 * s, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x, y - 65 * s);
+  ctx.lineTo(x, y - 26 * s);
+  ctx.moveTo(x, y - 26 * s);
+  ctx.lineTo(x - 13 * s, y + 2 * s);
+  ctx.moveTo(x, y - 26 * s);
+  ctx.lineTo(x + 13 * s, y + 2 * s);
+  ctx.stroke();
+
+  // Arms; one holds a wrench.
+  ctx.beginPath();
+  ctx.moveTo(x, y - 56 * s);
+  ctx.lineTo(x - 20 * s, y - 34 * s);
+  ctx.moveTo(x, y - 56 * s);
+  ctx.lineTo(x + 20 * s, y - 40 * s);
+  ctx.stroke();
+  tool(ctx, x + 12 * s, y - 38 * s, 22 * s, { color, alpha: 1, width: 2.4 });
+
+  // Tool belt.
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * s, y - 26 * s);
+  ctx.lineTo(x + 12 * s, y - 26 * s);
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.arc(x, y - 26 * s, 3 * s, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -602,15 +912,17 @@ export function painting(ctx, x, y, w, h, o = {}) {
   ctx.save();
   rr(ctx, ix, iy, iw, ih, 3);
   ctx.clip();
-  ctx.fillStyle = '#3a2d46';
-  ctx.fillRect(ix, iy, iw, ih);
-  // dusk band
-  const sky = ctx.createLinearGradient(0, iy, 0, iy + ih);
-  sky.addColorStop(0, '#2a2038');
-  sky.addColorStop(0.62, '#8c4652');
-  sky.addColorStop(1, '#d07a4f');
-  ctx.fillStyle = sky;
-  ctx.fillRect(ix, iy, iw, ih);
+  // Flat dusk bands. No gradient.
+  const bands = [
+    ['#2a2038', 0, 0.5],
+    ['#5a3348', 0.5, 0.72],
+    ['#8c4652', 0.72, 0.84],
+    ['#d07a4f', 0.84, 1],
+  ];
+  bands.forEach(([col, a, b]) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(ix, iy + ih * a, iw, ih * (b - a));
+  });
   ctx.fillStyle = '#F1FA8C';
   ctx.globalAlpha = alpha * 0.9;
   ctx.beginPath();

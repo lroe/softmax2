@@ -73,7 +73,12 @@ function sceneAt(t) {
 // ---------------------------------------------------------------- render
 
 function fitCanvas() {
-  const dpr = scaleParam || Math.min(window.devicePixelRatio || 1, 1.5);
+  // 1920x1080 is the design grid. The master is never softer than 2560x1440;
+  // on large/high-DPI displays it can go up to 4K. Capture can force a scale.
+  const cssW = canvas.clientWidth || W;
+  const device = Math.min(window.devicePixelRatio || 1, 2);
+  const targetPx = Math.max(2560, Math.min(4096, Math.round(cssW * device)));
+  const dpr = scaleParam || targetPx / W;
   canvas.width = Math.round(W * dpr);
   canvas.height = Math.round(H * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -84,7 +89,7 @@ function fitCanvas() {
 function draw(t) {
   ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
   ctx.globalAlpha = 1;
-  backdrop(ctx);
+  backdrop(ctx, canvas.width, canvas.height);
 
   const idx = sceneAt(t);
   const scene = ordered[idx];
@@ -271,6 +276,17 @@ window.addEventListener('keydown', (e) => {
     if (prev) seek(prev.start);
   }
 });
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    fitCanvas();
+    dirty = true;
+    draw(playhead);
+    dirty = false;
+  }, 180);
+});
+
 document.addEventListener('fullscreenchange', () => {
   fitCanvas();
   dirty = true;

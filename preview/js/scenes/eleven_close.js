@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, gate, leak, flow, pathFlow, thoughtRow, wordPill,
-  relativeBar, axes, lossCurve, floorStack, stat, mono, MONO,
+  relativeBar, axes, lossCurve, floorStack, stat, mono, softmaxCurve, MONO,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -1098,17 +1098,22 @@ const seventyEight = {
     const firstA = p(t, q.final1, 0.6);
     const secondA = p(t, q.final2, 0.7);
 
-    gate(ctx, 960, 430, 300, 470, {
-      alpha: base * 0.9, open: 0.9, accent: M.gate, crack: 0.55,
+    softmaxCurve(ctx, 560, 300, 800, 420, {
+      alpha: base * 0.95,
+      axesAlpha: 0.55,
+      curveProgress: 1,
+      marker: 0.72,
+      markerAlpha: firstA,
+      projectionAlpha: firstA * 0.8,
+      axisLabels: false,
+      label: 'softmax',
+      labelAlpha: firstA,
+      labelSize: 54,
+      crack: secondA,
     });
-    text(ctx, 'softmax', 960, 748, {
-      size: 54, weight: 500, color: C.fg, align: 'center', alpha: firstA,
-    });
-    const sw = measure(ctx, 'softmax', 54, 500, F.display, 0.2);
-    underline(ctx, 960 - sw / 2, 768, sw, { color: M.gate, width: 3, alpha: firstA * 0.85 });
 
     text(ctx, 'softmax has been in every model for years', 960, 880, {
-      size: 34, weight: 400, color: C.muted, align: 'center', alpha: firstA * 0.95,
+      size: 36, weight: 400, color: C.muted, align: 'center', alpha: firstA * 0.95,
     });
     if (secondA > 0.001) {
       text(ctx, 'we\u2019re still finding things wrong with it', 960, 950, {

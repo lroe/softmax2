@@ -4,7 +4,7 @@ import {
 } from '../kit.js';
 import {
   M, tag, chip, statement, gate, flow, pathFlow, thoughtRow, wordPill,
-  stepTracker, relativeBar, probList, stat, scoreList,
+  stepTracker, relativeBar, probList, stat, scoreList, softmaxCurve, singer,
 } from '../motifs.js';
 import { at, start } from '../data/timeline.js';
 
@@ -360,7 +360,7 @@ const twelve = {
     card(ctx, 200, 330, 420, 410, {
       fill: C.surface, stroke: 'rgba(248,248,242,0.14)', r: 18, alpha: base * 0.9,
     });
-    tag(ctx, 240, 380, 'a score', { color: M.logits, alpha: base * 0.9, size: 29 });
+    tag(ctx, 240, 380, 'a score', { color: M.logits, alpha: base * 0.9, size: 36 });
     if (nineA < 0.99) {
       const gh = base * 0.12 * (1 - nineA);
       text(ctx, '+9', 410, 520, {
@@ -381,17 +381,37 @@ const twelve = {
         alpha: minusA, ls: -4,
       });
     }
-    text(ctx, 'what do you do with it?', 410, 714, {
-      size: 28, weight: 400, color: C.dim, align: 'center',
+    text(ctx, 'what do you do?', 410, 714, {
+      size: 36, weight: 400, color: C.dim, align: 'center',
       alpha: Math.max(nineA, minusA) * 0.9,
     });
 
-    // Gate.
-    gate(ctx, 960, 535, 210, 380, {
-      alpha: base * 0.95, open: 0.15 + 0.85 * machineA, accent: M.gate, label: null,
+    // Ghost curve sets the layout before the machine is named.
+    if (machineA < 0.99) {
+      softmaxCurve(ctx, 870, 390, 180, 280, {
+        alpha: 0.18,
+        axesAlpha: 0.25,
+        curveProgress: 0.9,
+        marker: 0.72,
+        markerAlpha: 0.15,
+        projectionAlpha: 0,
+        axisLabels: false,
+        compact: true,
+      });
+    }
+    // The curve is the machine.
+    softmaxCurve(ctx, 870, 390, 180, 280, {
+      alpha: base * 0.95,
+      axesAlpha: 0.25 + 0.75 * machineA,
+      curveProgress: machineA,
+      marker: 0.72,
+      markerAlpha: chanceA,
+      projectionAlpha: chanceA,
+      axisLabels: false,
+      compact: true,
     });
     if (machineA > 0.001) {
-      tag(ctx, 960, 348, 'a machine', { color: C.muted, alpha: machineA * (1 - softmaxA) * 0.95, size: 28, align: 'center' });
+      tag(ctx, 960, 348, 'a machine', { color: C.muted, alpha: machineA * (1 - softmaxA) * 0.95, size: 30, align: 'center' });
     }
     text(ctx, 'softmax', 960, 776, {
       size: 56, weight: 500, color: C.fg, align: 'center', alpha: softmaxA,
@@ -403,7 +423,7 @@ const twelve = {
     card(ctx, 1290, 330, 430, 410, {
       fill: C.surface, stroke: 'rgba(248,248,242,0.14)', r: 18, alpha: base * 0.9,
     });
-    tag(ctx, 1330, 380, 'chances', { color: M.gate, alpha: base * 0.9, size: 29 });
+    tag(ctx, 1330, 380, 'chances', { color: M.gate, alpha: base * 0.9, size: 36 });
     if (chanceA < 0.99) {
       const gh = base * 0.14 * (1 - chanceA);
       relativeBar(ctx, 1418, 440, 260, 30, 0.9, { color: M.gate, alpha: gh, progress: 0.8 });
@@ -419,22 +439,22 @@ const twelve = {
         labelW: 88, size: 34, valueSize: 34, progress: p(t, q.ninety, 0.8),
       });
       text(ctx, 'and the rest', 1330, 640, {
-        size: 28, weight: 400, color: C.dim, alpha: chanceA * 0.8,
+        size: 36, weight: 400, color: C.dim, alpha: chanceA * 0.8,
       });
     }
 
     // Arrows through the machine.
     if (machineA > 0.001) {
-      arrow(ctx, 630, 535, 846, 535, {
+      arrow(ctx, 630, 535, 850, 535, {
         color: 'rgba(248,248,242,0.35)', width: 2, progress: machineA, head: 10,
       });
-      arrow(ctx, 1074, 535, 1280, 535, {
+      arrow(ctx, 1068, 535, 1280, 535, {
         color: 'rgba(248,248,242,0.35)', width: 2, progress: p(t, q.machine + 0.25, 0.6), head: 10,
       });
     }
 
     tag(ctx, 960, 900, 'the smallest example', {
-      color: C.dim, alpha: p(t, q.smallest, 0.6) * 0.9, size: 30, align: 'center',
+      color: C.dim, alpha: p(t, q.smallest, 0.6) * 0.9, size: 36, align: 'center',
     });
   },
 };
@@ -454,8 +474,8 @@ const thirteen = {
     const divideA = p(t, q.divide, 0.7);
     const pctA = p(t, q.results, 0.8);
 
-    text(ctx, 'softmax does two things', 960, 196, {
-      size: 38, weight: 450, color: C.muted, align: 'center',
+    text(ctx, 'softmax does two things', 960, 126, {
+      size: 36, weight: 450, color: C.muted, align: 'center',
       alpha: twoA * 0.95,
     });
 
@@ -472,8 +492,13 @@ const thirteen = {
         fill: C.surface, stroke: 'rgba(248,248,242,0.14)', r: 20,
         alpha: base * e.a, accent: i === 0 && pctA > 0.5 ? C.cyan : null, accentW: 3,
       });
+      singer(ctx, c.x + 210, 294, 1.4, {
+        alpha: e.a,
+        pose: i === 0 ? 'confident' : i === 2 ? 'hesitant' : 'neutral',
+        accent: i === 0 ? M.logits : M.gate,
+      });
       text(ctx, `singer ${c.name}`, c.x + 34, 352, {
-        size: 30, weight: 400, color: C.muted, alpha: e.a,
+        size: 36, weight: 400, color: C.muted, alpha: e.a,
       });
       // score
       text(ctx, String(c.score), c.x + w / 2, 500, {
@@ -501,7 +526,7 @@ const thirteen = {
 
     if (eA > 0.001) {
       text(ctx, 'raise e to the score', 960, 802, {
-        size: 30, weight: 400, color: C.dim, align: 'center', alpha: eA * (1 - divideA) * 0.9,
+        size: 36, weight: 400, color: C.dim, align: 'center', alpha: eA * (1 - divideA) * 0.9,
       });
     }
     if (divideA > 0.001) {
@@ -509,12 +534,12 @@ const thirteen = {
         size: 38, weight: 500, color: M.gate, align: 'center', alpha: divideA,
       });
       text(ctx, 'the total', 960, 838, {
-        size: 27, weight: 400, color: C.dim, align: 'center', alpha: divideA * 0.9,
+        size: 30, weight: 400, color: C.dim, align: 'center', alpha: divideA * 0.9,
       });
     }
     if (pctA > 0.5) {
       text(ctx, 'these are chances', 960, 900, {
-        size: 30, weight: 400, color: C.muted, align: 'center',
+        size: 36, weight: 400, color: C.muted, align: 'center',
         alpha: p(t, q.results + 0.4, 0.5) * 0.95,
       });
     }

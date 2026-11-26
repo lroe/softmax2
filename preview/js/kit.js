@@ -618,14 +618,17 @@ export function drawPhoto(ctx, x, y, size, o = {}) {
   rr(ctx, x, y, size, size, radius);
   ctx.clip();
 
-  // Dusk sky.
-  const sky = ctx.createLinearGradient(0, y, 0, y + size);
-  sky.addColorStop(0, '#241a36');
-  sky.addColorStop(0.45, '#4a2d50');
-  sky.addColorStop(0.7, '#a04a54');
-  sky.addColorStop(1, '#d97a4f');
-  ctx.fillStyle = sky;
-  ctx.fillRect(x, y, size, size);
+  // Dusk sky in flat bands. No gradients.
+  const bands = [
+    ['#241a36', 0, 0.45],
+    ['#4a2d50', 0.45, 0.7],
+    ['#a04a54', 0.7, 0.88],
+    ['#d97a4f', 0.88, 1],
+  ];
+  bands.forEach(([col, a, b]) => {
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y + size * a, size, size * (b - a));
+  });
 
   // Sun.
   ctx.fillStyle = '#F1FA8C';
@@ -999,11 +1002,14 @@ export function brace(ctx, x1, x2, y, o = {}) {
 
 // ---- texture --------------------------------------------------------------
 
+// One large noise tile, generated at 1:1 and repeated without scaling. The
+// backdrop cache is baked at the actual output pixel size so 2K/4K backgrounds
+// do not become soft blocks.
 let grainCanvas = null;
-export function makeGrain() {
+export function makeGrain(size = 2048) {
   const c = document.createElement('canvas');
-  c.width = 360;
-  c.height = 360;
+  c.width = size;
+  c.height = size;
   const g = c.getContext('2d');
   const img = g.createImageData(c.width, c.height);
   for (let i = 0; i < img.data.length; i += 4) {
@@ -1011,14 +1017,14 @@ export function makeGrain() {
     img.data[i] = v;
     img.data[i + 1] = v;
     img.data[i + 2] = v;
-    img.data[i + 3] = Math.random() * 22;
+    img.data[i + 3] = Math.random() * 5;
   }
   g.putImageData(img, 0, 0);
   grainCanvas = c;
   return c;
 }
 
-export function drawGrain(ctx, alpha = 0.5) {
+export function drawGrain(ctx, alpha = 0.6) {
   if (!grainCanvas) makeGrain();
   const pat = ctx.createPattern(grainCanvas, 'repeat');
   ctx.save();
@@ -1029,40 +1035,33 @@ export function drawGrain(ctx, alpha = 0.5) {
 }
 
 let bgCache = null;
+let bgKey = '';
 
-function buildBg() {
+function buildBg(pw, ph) {
   const c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
+  c.width = pw;
+  c.height = ph;
   const g = c.getContext('2d');
+
+  // Flat Dracula night. No radial glow, no vignette, no circular bands.
   g.fillStyle = C.bg;
-  g.fillRect(0, 0, W, H);
-  const glow = g.createRadialGradient(W / 2, H * 0.44, H * 0.1, W / 2, H / 2, H * 0.95);
-  glow.addColorStop(0, 'rgba(255,255,255,0.028)');
-  glow.addColorStop(0.5, 'rgba(255,255,255,0.008)');
-  glow.addColorStop(1, 'rgba(0,0,0,0.20)');
-  g.fillStyle = glow;
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, pw, ph);
+
   if (!grainCanvas) makeGrain();
   const pat = g.createPattern(grainCanvas, 'repeat');
-  g.globalAlpha = 0.22;
+  g.globalAlpha = 0.6;
   g.fillStyle = pat;
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, pw, ph);
   g.globalAlpha = 1;
-  const vig = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
-  vig.addColorStop(0, 'rgba(0,0,0,0)');
-  vig.addColorStop(1, 'rgba(0,0,0,0.28)');
-  g.fillStyle = vig;
-  g.fillRect(0, 0, W, H);
+
   bgCache = c;
+  bgKey = `${pw}x${ph}`;
 }
 
-export function backdrop(ctx) {
-  if (!bgCache) buildBg();
+export function backdrop(ctx, pw = W, ph = H) {
+  const key = `${pw}x${ph}`;
+  if (!bgCache || bgKey !== key) buildBg(pw, ph);
   ctx.drawImage(bgCache, 0, 0, W, H);
 }
 
-// The vignette is baked into the backdrop so the compositor does not pay for
-// a full-screen radial gradient every frame.
 export function vignette() {}
-
