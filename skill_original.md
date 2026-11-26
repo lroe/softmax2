@@ -839,7 +839,7 @@ This order prevents the “empty then crowded” failure mode:
 - **Morph/move:** interpolate position/scale with `easeInOut` over 0.8–1.2s.
 - **Dim:** alpha 1→0.35–0.55 over 0.4s when the focus moves.
 - **No typewriter text. No blur-in. No 3D flips. No bouncing logos. No per-scene zoom reset.** If the next scene shares the same object, carry the camera state or cut without a camera move.
-- **Summary strips need a hold.** Reveal a list or five-step strip as a group, not one item at a time. After the last item is visible, give it at least `1.0s + 0.4s × items` (five items → 3.0s) before the cut. If the narration is faster than that, move the reveal earlier or extend the scene boundary; do not animate the last word into the final second.
+- **Summary strips need a hold.** Reveal a list or five-step strip as a group, not one item at a time. After the last item is visible, give it at least `1.0s + 0.4s × items` (five items → 3.0s) before the cut. If the narration is faster than that, move the reveal earlier or extend the scene boundary; do not animate the last word into the final second. Do not add a strip that recaps the next scene’s diagram; a single handoff statement is better.
 
 ### 11.4 Ghost scaffolds — empty geometry only
 
@@ -1335,6 +1335,7 @@ A video is done when all of these are true:
 - [ ] No camera reset at a cut; shared-object continuations keep the same transform or stay static.
 - [ ] Identical-layout cuts use `hardCut: true`; no crossfade brightness pulse on shared geometry.
 - [ ] Summary strips hold for at least `1.0s + 0.4s × items` after the last item is visible; no item animates into the final second.
+- [ ] No summary strip recaps the next scene’s diagram; a handoff statement is enough.
 - [ ] Teaser tables show one row, not the whole future dataset; no redundant pointer label.
 - [ ] README explains how to run, controls, stills, and the fact that no MP4 was rendered.
 - [ ] Server is running on localhost; the URL is verified.
@@ -1620,7 +1621,7 @@ The narration at this point is only introducing **one test**. The viewer sees th
 - row on “one test”;
 - question on “real, or just filler”;
 - table fades before “let's start from zero”;
-- the replacement statement and loop strip get the rest of the scene.
+- the replacement statement gets the rest of the scene.
 
 **Rules this teaches:**
 
@@ -1632,7 +1633,7 @@ The narration at this point is only introducing **one test**. The viewer sees th
 
 ---
 
-## 26. Case study: the five-step recap
+## 26. Case study: the five-step recap (removed)
 
 **Bad frame (the one that prompted this rule):**
 
@@ -1641,26 +1642,30 @@ The narration at this point is only introducing **one test**. The viewer sees th
 - `feed` is still fading in around 97.0s;
 - the scene cuts at 98.0s.
 
-`feed` gets less than one second of settled time. The viewer is still reading when the next scene starts. The narration is not the problem; the reveal is. The strip was animated one item at a time, starting from the last cue of the idea, so the last item landed almost on the cut.
+`feed` gets less than one second of settled time. The viewer is still reading when the next scene starts.
 
-**Good frame:**
+**What we changed:**
 
-- the same five words, revealed together;
-- the whole strip visible by 95.4s;
-- the scene holds until 98.8s;
-- a hard cut to the detailed loop, so the strip does not overlap the incoming diagram.
+The strip was removed entirely. The handoff is now two lines:
 
-Settled hold: `98.8 − 95.4 = 3.4s` for five items. That clears the `1.0 + 0.4 × 5 = 3.0s` budget.
+- “you can’t see the bug”
+- “without seeing the loop”
+
+They are centered, fully visible by 95.4s, hold for **2.6s**, and hard-cut at **98.0s** to the detailed loop.
+
+**Why remove it:**
+
+The next scene is the detailed version of the same five steps. Recapping that diagram immediately before showing it does not add information; it adds density and makes the viewer read the same idea twice. A statement is enough.
 
 **Rules this teaches:**
 
-- Reveal a summary list as a **group**. Stagger the words only if the last one still lands at least 1.5s before the cut.
-- Start the summary at the **first** cue of the idea, not the last. A five-word strip needs about three seconds, not one.
-- Budget: `hold = scene.end − last_item_visible`; require `hold ≥ 1.0s + 0.4s × items`.
-- If the hold is short, move the scene boundary. Extending `end` by 0.8s is cheaper than narrating a list the viewer cannot read.
-- Use `hardCut: true` when the strip hands off to a dense diagram. A crossfade stacks the strip on top of the new layout for 0.24s.
+- Do not recap a diagram immediately before showing that diagram. Let the next scene do the work.
+- A handoff can be a single statement. It does not need a preview strip.
+- If a summary list is truly needed, reveal it as a group and budget `1.0s + 0.4s × items`.
+- Hard-cut from a statement into a dense diagram. Do not crossfade the two.
+- Do not extend a scene just to fit a recap. Cut earlier and let the next scene start on the narration beat.
 
-**Minimal pattern:**
+**Minimal pattern (only when the list earns its place):**
 
 ```js
 // reveal all items on one cue
@@ -1672,7 +1677,6 @@ steps.forEach((step, i) => {
   }
 });
 ```
-
 
 ---
 

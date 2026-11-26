@@ -59,10 +59,10 @@ const q = {
 const nine = {
   id: 's09-the-loop',
   title: 'The loop',
-  start: 98.8,
+  start: 98.0,
   end: start(14),
-  // Summary strip to detailed loop: a crossfade overlaps the strip with the
-  // new text/model diagram. Cut clean instead.
+  // Handoff statement to the detailed loop: hard-cut instead of crossfading
+  // the text into the incoming diagram.
   hardCut: true,
   draw(ctx, t) {
     const base = 0.92;

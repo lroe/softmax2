@@ -329,13 +329,12 @@ const eight = {
   id: 's08-table-teaser',
   title: 'The test, and the loop',
   start: start(11) + 0.36,
-  end: 98.8,
+  end: 98.0,
   draw(ctx, t) {
     const tableA = 1 - p(t, q.zero, 0.3);
     const rowA = p(t, q.test, 0.6);
     const realA = p(t, q.real, 0.6);
     const zeroA = p(t, q.zero + 0.3, 0.55);
-    const loopA = p(t, q.zero + 0.4, 0.55);
 
     if (tableA > 0.001) {
       ctx.save();
@@ -402,38 +401,11 @@ const eight = {
     if (zeroA > 0.001) {
       ctx.save();
       ctx.globalAlpha = zeroA;
-      text(ctx, 'you can\u2019t see the bug', 960, 430, {
+      text(ctx, 'you can\u2019t see the bug', 960, 500, {
         size: 64, weight: 450, color: C.fg, align: 'center', ls: -1,
       });
-      text(ctx, 'without seeing the loop', 960, 512, {
+      text(ctx, 'without seeing the loop', 960, 582, {
         size: 64, weight: 450, color: C.muted, align: 'center', ls: -1,
-      });
-      ctx.restore();
-    }
-
-    // A ghost five-step loop along the bottom.
-    if (loopA > 0.001) {
-      const steps = ['think', 'score', 'chances', 'pick', 'feed'];
-      const xs = [420, 690, 960, 1230, 1500];
-      ctx.save();
-      ctx.globalAlpha = loopA * 0.95;
-      // Reveal the whole strip together, so the last word is not still
-      // appearing when the scene cuts.
-      steps.forEach((s, i) => {
-        text(ctx, s, xs[i], 780, {
-          size: 36, weight: 500, color: i === 2 ? M.gate : C.muted,
-          align: 'center',
-        });
-        if (i < steps.length - 1) {
-          arrow(ctx, xs[i] + 62, 764, xs[i + 1] - 62, 764, {
-            color: 'rgba(248,248,242,0.28)', width: 1.8, progress: loopA, head: 8,
-          });
-        }
-      });
-      // return arrow: feed back to think
-      arrow(ctx, 1500, 840, 430, 840, {
-        color: 'rgba(248,248,242,0.24)', width: 1.6,
-        progress: p(t, q.zero + 0.7, 0.55), head: 9,
       });
       ctx.restore();
     }
