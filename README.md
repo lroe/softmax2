@@ -3,7 +3,7 @@
 A word-synced animated explainer built from `script.txt` and `audio.wav`.
 It is authored on a 1920×1080 grid and rendered at **2560×1440 (2K)** minimum.
 The deliverable is the **localhost preview**, not an MP4.
-The production playbook is **`skill_original.md`**; `skill.md` is the short style brief.
+The production playbook is **`skill_original.md`**.
 
 ## Run
 

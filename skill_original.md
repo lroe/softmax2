@@ -51,6 +51,7 @@ These are the rules that separate "good enough" from the reference quality.
 16. **2K-native caches.** The backdrop, grain, and any texture cache must be baked at the actual output pixel size (`ctx.canvas.width × ctx.canvas.height`). Never bake 1920×1080 and stretch it. See §21.
 17. **Pictures are flat line art, not gradient renders.** When a beat needs a picture, request one with a prompt; use transparent PNG, no gradients/glow/shadows/text. See §22.
 18. **The math should look like the math.** Use the actual curve/shape for a function (for softmax: score vs chance curve) rather than an abstract object the viewer has to decode. See §23.
+19. **No future-state leakage.** A value, label, result, chart, or object that belongs to a later cue must not be visible early — not even faintly. Ghost scaffolds are empty geometry only. If the viewer can read the conclusion at 20% alpha, it is leaked. See §11.4.
 
 ---
 
@@ -85,7 +86,7 @@ project/
   audio.wav                     # supplied voiceover
   voiceover_narration.txt       # exact script, paragraph lines
   visual_guide.txt              # scene-by-scene visual brief
-  skill.md                      # this file
+  skill_original.md             # this file
   align.py                      # generates word-level timings
   whisper_words.json            # faster-whisper raw output
   README.md                     # how to run the preview
@@ -813,17 +814,23 @@ This order prevents the “empty then crowded” failure mode:
 - **Dim:** alpha 1→0.35–0.55 over 0.4s when the focus moves.
 - **No typewriter text. No blur-in. No 3D flips. No bouncing logos.**
 
-### 11.4 Ghost scaffolds
+### 11.4 Ghost scaffolds — empty geometry only
 
-If the first real cue is more than ~0.5s after the scene start, draw the final layout at 10–20% alpha with dashed borders, then fill it at the cue. Examples:
+If the first real cue is more than ~0.5s after the scene start, draw the **layout at 10–20% alpha with dashed borders**, then fill it at the cue. Examples:
 
-- four empty recipe cards before the four methods;
-- three empty gift cards before the three gifts;
-- a ghost 256-token grid before the tokens appear;
-- a ghost bar track before the bars;
-- a ghost timeline before the stages.
+- four empty recipe card outlines before the four methods;
+- three empty gift card outlines before the three gifts;
+- an empty track before the bars grow;
+- an empty timeline before the stages appear;
+- an empty 256-cell grid before the tokens appear.
 
-This is the single biggest fix for “the scene starts empty”.
+**Hard rule: a ghost is geometry, not content.** Do not ghost the final title, value, result label, axis number, chart, object, or outcome. A ghost card has an outline; it does not have its title, number, or filled state. Faint text is still readable text. If the scene would otherwise be empty, use a neutral frame, a track, or the existing anchor — not a preview of the answer.
+
+Bad: a ghost benchmark chart with “frontier models / silent agent” labels and a ghost “≈ ½” before the narration says “beat several frontier models” and “half as many tokens.”
+
+Good: at the start, show only the question and the agent. Add the silent loop on “thinking in silence,” the tool on “needs a tool,” the benchmark bars on “beat several frontier models,” and the ½ on “half as many tokens.”
+
+This is the single biggest fix for “the scene starts empty” **without** leaking the scene’s result.
 
 ### 11.5 One focal zone
 
@@ -1121,7 +1128,7 @@ What to look for:
 
 ### 14.2 Start + 0.4s check
 
-For every scene start, render `start + 0.4`. If the frame is more than ~80% empty, move the base scaffold earlier or add a ghost.
+For every scene start, render `start + 0.4`. If the frame is more than ~80% empty, move the base scaffold earlier or add an **empty** ghost. Also check the opposite failure: can you read a future label, value, result, or object before its cue? If yes, remove it. The silent-agent scene is the reference case: no benchmark bars, no ≈½, no tool pill before their words.
 
 ### 14.3 Full-timeline draw sweep
 
@@ -1182,6 +1189,8 @@ Read the on-screen text as a viewer, not as the author:
 - Does any scene reveal the conclusion before the narration?
 - Does the final state hold long enough?
 - Does any scene have a title-like header that is not the actual content? Remove it.
+- **Future-state audit:** at start + 0.4 and at every beat, is any later label/value/object visible? Faint ghost text counts. Remove it or delay it.
+- **Silent-agent case:** only question + agent + character at the start; loop on “thinking in silence”; tool on “needs a tool”; bars on “beat frontier models”; ½ on “half as many tokens.”
 - **Focus audit:** list every visible text block in the frame. If a beat has more than two, remove one. No corner-label + bottom-caption hooks.
 - **Hook audit:** the first scene must have one anchor and attached labels only. No bottom caption while two other labels are competing.
 
@@ -1237,7 +1246,7 @@ These are real bugs from the reference build. Put them in the checklist.
 8. **A pill and a following text node can overlap.** Use the pill's returned `{x,w}` to place the text.
 9. **Captions can sit on a dot grid.** Measure the grid's bottom and place the caption 50–70px below.
 10. **Vertical text is never acceptable.** It is unreadable on phones and breaks the horizontal reading path.
-11. **Ghost scaffolds can be too faint.** 0.10–0.20 alpha plus a dashed border; add faint labels if the scene would otherwise be empty.
+11. **Ghost scaffolds leak future content.** 0.10–0.20 alpha plus a dashed border, **empty geometry only**. Never add faint labels, values, results, chart labels, or objects. Faint is still readable. If the scene would otherwise be empty, use a neutral frame or track, not a preview of the answer.
 12. **A scene can be blank for 2–3s after a cut.** Check `start + 0.4`; pull the base scaffold earlier.
 13. **Audio elements created in JS are not in the DOM.** `document.querySelector('audio')` returns null; use `window.__audio` for QA.
 14. **Autoplay is blocked without a gesture.** Keep the poster play button; don't try to autoplay on load.
@@ -1260,6 +1269,8 @@ These are real bugs from the reference build. Put them in the checklist.
 31. **Text below 36px is not “secondary”; it is unreadable on a phone.** Cut it or move it to narration.
 32. **A gradient/glow picture will not match the flat video.** Reject it; request flat line art on transparent PNG.
 33. **A missing picture must never show a broken box.** Fall back to vector art or omit the slot until the asset arrives.
+34. **A ghost chart or ghost stat reveals the conclusion early.** This is the silent-agent failure: ghost benchmark bars and a ghost ≈½ appeared before their words. Remove the content; keep only empty tracks/frames.
+35. **A candidate word set appears before the pick.** In the scores→chances→one-word scene, showing dog/sat/the/a and the 'chances'/'one word' labels at the 'scores' beat gives the viewer four concepts at once and reveals the answer set before the pick. Show scores only; add the curve on 'softmax'; add the chosen word on 'picks'; add the discarded words on 'throws.'
 
 ---
 
@@ -1289,6 +1300,7 @@ A video is done when all of these are true:
 - [ ] Portrait mobile player does not overflow.
 - [ ] 2K still checked at 100%: flat background, pixel-level grain, no circular bands.
 - [ ] Hook has one focal zone; axis labels sit beside axes; no bottom caption competing.
+- [ ] No future-state leakage: no later label, value, chart, object, or result is readable at scene start or before its cue.
 - [ ] README explains how to run, controls, stills, and the fact that no MP4 was rendered.
 - [ ] Server is running on localhost; the URL is verified.
 
@@ -1513,3 +1525,34 @@ Timing:
 
 The curve is the through-line. Later, a gate may be used as a metaphor for the boundary between thought and speech, but the function itself is always the curve.
 
+
+
+---
+
+## 24. Case study: scores → chances → one word
+
+**Bad frame (the one that prompted this rule):**
+
+- score rows for cat, dog, sat, the;
+- a faint future curve;
+- `chances` and `one word` labels already on screen;
+- the candidate list `dog sat the a` already visible.
+
+At this beat the narration has only introduced **scores**. The viewer sees four concepts and the answer set before the pick. That is not minimal; it is a diagram with no focal point.
+
+**Good sequence:**
+
+1. Start: an empty score panel with four empty tracks. No labels, no values, no future words.
+2. On “scores”: the score rows and the `scores` label.
+3. On “softmax” / “turns scores into chances”: the curve and the `chances` label.
+4. On “picks one word”: the chosen word and the `one word` label.
+5. On “throws everything else away”: the discarded words and the red tag.
+
+**Rules this teaches:**
+
+- A candidate set is a result of the pick beat, not the score beat.
+- An empty axis is still a visual object; do not show the future chart before its cue.
+- One focal zone per beat: scores, then curve, then chosen word, then discarded set.
+- The viewer should never see the right side of the frame before the narration introduces it.
+
+Use this case when a scene has three stages. If all three stages are visible at once, it is a dashboard, not an explainer.

@@ -210,15 +210,7 @@ const three = {
     const barsA = p(t, q.beat, 0.7);
     const statA = p(t, q.tokens, 0.7);
 
-    // --- ghost scaffold: the whole layout is present before its cue ------
-    const ghost = 0.24;
     const loopPts = [[750, 390], [750, 300], [840, 250], [1010, 250], [1100, 300], [1100, 390]];
-    if (loopA < 0.99) {
-      strokePath(ctx, loopPts, {
-        color: 'rgba(189,147,249,0.5)', width: 2.2, alpha: base * ghost * (1 - loopA),
-        rough: 0.3, dash: [8, 8],
-      });
-    }
 
     // Input.
     card(ctx, 170, 438, 300, 124, {
@@ -240,7 +232,7 @@ const three = {
     text(ctx, 'speaks', 646, 566, { size: 36, weight: 400, color: M.word, alpha: base });
     silentAgent(ctx, 958, 600, 1.0, { alpha: base, accent: M.thought });
     tag(ctx, 1016, 430, 'Stanford', {
-      color: C.dim, alpha: p(t, q.stanford, 0.6) * 0.9, size: 26, align: 'right',
+      color: C.dim, alpha: p(t, q.stanford, 0.6) * 0.9, size: 30, align: 'right',
     });
 
     // The silent loop.
@@ -264,20 +256,13 @@ const three = {
     });
 
     // The only spoken moment: a tool call.
-    const tGhost = 1 - toolA;
-    if (tGhost > 0.01) {
-      card(ctx, 1214, 426, 196, 64, {
-        fill: 'rgba(49,51,66,0.25)', stroke: 'rgba(255,184,108,0.28)',
-        r: 32, lw: 1.4, dash: [7, 7], alpha: base * ghost * tGhost,
-      });
-    }
     if (toolA > 0.001) {
       arrow(ctx, 1056, 500, 1196, 500, {
         color: 'rgba(248,248,242,0.35)', width: 2, progress: toolA,
       });
-      wordPill(ctx, 1216, 458, 'tool call', { alpha: toolA, size: 34 });
+      wordPill(ctx, 1216, 458, 'tool call', { alpha: toolA, size: 36 });
       text(ctx, 'the only text', 1216, 534, {
-        size: 28, weight: 400, color: C.dim, alpha: toolA * 0.9,
+        size: 36, weight: 400, color: C.dim, alpha: toolA * 0.9,
       });
     }
 
@@ -287,7 +272,7 @@ const three = {
     const trackX = 510;
     const trackW = 540;
     text(ctx, 'agent benchmarks · relative', bx, by - 34, {
-      size: 28, weight: 400, color: C.dim, alpha: Math.max(barsA, base * ghost),
+      size: 36, weight: 400, color: C.dim, alpha: barsA,
     });
     const bars = [
       { label: 'frontier models', f: 0.54, color: 'rgba(184,185,197,0.65)' },
@@ -296,11 +281,11 @@ const three = {
     bars.forEach((b, i) => {
       const yy = by + i * 70;
       text(ctx, b.label, bx, yy + 26, {
-        size: 34, weight: 500, color: C.fg, alpha: Math.max(barsA, base * ghost),
+        size: 36, weight: 500, color: C.fg, alpha: barsA,
       });
       card(ctx, trackX, yy + 6, trackW, 26, {
         fill: 'rgba(248,248,242,0.07)', stroke: null, r: 6,
-        alpha: Math.max(barsA, base * ghost),
+        alpha: barsA,
       });
       if (barsA > 0.001) {
         card(ctx, trackX, yy + 6, trackW * b.f * p(t, q.beat + i * 0.18, 0.7), 26, {
@@ -310,15 +295,15 @@ const three = {
     });
 
     // Token count.
-    const showStat = Math.max(statA, base * ghost * 0.9);
+    const showStat = statA;
     if (showStat > 0.001) {
       text(ctx, '≈ ½', 1470, 852, {
         size: 112, weight: 500, color: M.thought, align: 'center',
         alpha: showStat, ls: -4,
       });
       text(ctx, 'the tokens of a normal agent', 1470, 902, {
-        size: 30, weight: 400, color: C.muted, align: 'center',
-        alpha: showStat * (statA > 0 ? 0.95 : 0.7),
+        size: 36, weight: 400, color: C.muted, align: 'center',
+        alpha: showStat * 0.95,
       });
     }
   },

@@ -50,23 +50,19 @@ const five = {
     const throwA = p(t, q.throws, 0.7);
     const dim = 1 - 0.55 * throwA;
 
-    // Ghost scores and curve anchor the frame.
+    // Empty score panel is the base. No future labels, values, or words.
     if (scoresA < 0.99) {
-      const gh = base * 0.28 * (1 - scoresA);
-      tag(ctx, 200, 318, 'scores', { color: M.logits, alpha: gh, size: 36 });
-      tag(ctx, 840, 330, 'chances', { color: M.gate, alpha: gh, size: 36 });
-      tag(ctx, 1520, 318, 'one word', { color: M.word, alpha: gh, size: 36 });
-      scoreList(ctx, 200, 372, 600, [
-        { label: 'cat', value: 8.2 }, { label: 'dog', value: 1.1 },
-        { label: 'sat', value: -2.4 }, { label: 'the', value: -4.9 },
-      ], {
-        max: 10, alpha: gh, progress: 0.7, rowH: 56, gap: 14,
-        labelSize: 36, valueSize: 36, zeroFrac: 0.56, halfFrac: 0.42,
+      const gh = base * 0.4 * (1 - scoresA);
+      card(ctx, 180, 320, 640, 390, {
+        fill: 'rgba(49,51,66,0.28)', stroke: 'rgba(248,248,242,0.26)',
+        r: 20, lw: 1.4, dash: [8, 8], alpha: gh,
       });
-      card(ctx, 1398, 448, 120, 64, {
-        fill: 'rgba(49,51,66,0.2)', stroke: 'rgba(255,184,108,0.28)', r: 32,
-        lw: 1.3, dash: [7, 7], alpha: gh * 1.4,
-      });
+      for (let i = 0; i < 4; i++) {
+        card(ctx, 500, 386 + i * 70, 300, 18, {
+          fill: 'rgba(248,248,242,0.12)', stroke: 'rgba(248,248,242,0.18)',
+          r: 6, lw: 1, alpha: gh,
+        });
+      }
     }
 
     // Left: scores.
@@ -89,7 +85,7 @@ const five = {
     tag(ctx, 840, 330, 'chances', { color: M.gate, alpha: chancesA * 0.95, size: 36 });
     softmaxCurve(ctx, 840, 390, 300, 260, {
       alpha: base * 0.95,
-      axesAlpha: 0.22 + 0.78 * chancesA,
+      axesAlpha: chancesA,
       curveProgress: chancesA,
       marker: 0.72,
       markerAlpha: pickA,
@@ -125,15 +121,16 @@ const five = {
 
     // Everything else is thrown away.
     const others = ['dog', 'sat', 'the', 'a'];
-    others.forEach((w2, i) => {
-      const e = enter(t, q.twoThings + 0.2 + i * 0.07, 0.5, 0, 10);
-      if (e.a <= 0.001) return;
-      const drift = throwA * (26 + i * 9);
-      text(ctx, w2, 1160 + i * 100, 660 + drift, {
-        size: 36, weight: 400, color: C.muted,
-        alpha: e.a * (1 - throwA * 0.82) * dim,
+    if (throwA > 0.001) {
+      others.forEach((w2, i) => {
+        const e = enter(t, q.throws + i * 0.06, 0.45, 0, 8);
+        const drift = throwA * (26 + i * 9);
+        text(ctx, w2, 1160 + i * 100, 660 + drift, {
+          size: 36, weight: 400, color: C.muted,
+          alpha: e.a * (1 - throwA * 0.82) * dim,
+        });
       });
-    });
+    }
     if (throwA > 0.001) {
       tag(ctx, 1160, 746, 'thrown away', {
         color: M.bug, alpha: throwA * 0.9, size: 36,
