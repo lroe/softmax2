@@ -96,7 +96,7 @@ function draw(t) {
   const prev = ordered[idx - 1];
   const fade = 0.24;
 
-  if (prev && t - scene.start < fade) {
+  if (prev && scene.hardCut !== true && t - scene.start < fade) {
     const q = easeInOut(clamp((t - scene.start) / fade));
     const prevT = Math.min(prev.end - 0.001, Math.max(prev.start, t));
     ctx.save();

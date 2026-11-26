@@ -185,6 +185,13 @@ Good:
 
 If the next scene is **exactly the same layout**, do not add a camera move that cannot be continuous. Static continuity is better than a reset.
 
+**Do not crossfade identical layouts.** The renderer fades the previous scene out while fading the new scene in. When both scenes draw the same axes, curve, or card at the same coordinates, the fade double-draws the geometry: the line gets darker for ~0.24s, then settles. That brightness pulse reads as another glitch. Mark the incoming scene `hardCut: true` so the renderer skips the crossfade and cuts on one frame. The frames are identical, so the cut is invisible.
+
+```js
+// scene that continues the exact same layout
+hardCut: true,
+```
+
 ---
 
 ## 5. Intake: what to extract before drawing anything
@@ -588,7 +595,7 @@ A crossfade through the Dracula background, **0.20–0.26s** (6–8 frames at 30
 
 ```js
 const fade = 0.24;
-if (prev && t - scene.start < fade) {
+if (prev && scene.hardCut !== true && t - scene.start < fade) {
   const q = easeInOut((t - scene.start) / fade);
   ctx.globalAlpha = 1 - q;
   prev.draw(ctx, prev.end - 0.001, ...);
@@ -600,6 +607,7 @@ if (prev && t - scene.start < fade) {
 - Draw the outgoing scene at its **last** state, not at the current time, to avoid it evolving during the fade.
 - No wipes, no flashy zooms, no rotations.
 - Do not expose an empty background for more than ~0.2s.
+- If the incoming scene continues the **identical layout**, set `hardCut: true`. A crossfade would double-draw the shared axes/curve and pulse its brightness. A hard cut between identical frames is invisible. See §4.3.
 
 ### 9.7 Capture mode
 
@@ -1291,6 +1299,7 @@ These are real bugs from the reference build. Put them in the checklist.
 34. **A ghost chart or ghost stat reveals the conclusion early.** This is the silent-agent failure: ghost benchmark bars and a ghost ≈½ appeared before their words. Remove the content; keep only empty tracks/frames.
 35. **A candidate word set appears before the pick.** In the scores→chances→one-word scene, showing dog/sat/the/a and the 'chances'/'one word' labels at the 'scores' beat gives the viewer four concepts at once and reveals the answer set before the pick. Show scores only; add the curve on 'softmax'; add the chosen word on 'picks'; add the discarded words on 'throws.'
 36. **The camera resets at a scene cut.** A 4.5% push-in in the hook followed by a 1.0-scale continuation is a snap-back. Carry the camera state or remove the move; if the next scene is the same layout, keep it static.
+37. **A crossfade pulses identical geometry.** Fading between two scenes that draw the same axes or curve at the same coordinates double-draws them for the fade duration. The line brightens, then settles. Use `hardCut: true` on the incoming scene. A hard cut between identical frames is invisible; a crossfade is not.
 
 ---
 
@@ -1322,6 +1331,7 @@ A video is done when all of these are true:
 - [ ] Hook has one focal zone; axis labels sit beside axes; no bottom caption competing.
 - [ ] No future-state leakage: no later label, value, chart, object, or result is readable at scene start or before its cue.
 - [ ] No camera reset at a cut; shared-object continuations keep the same transform or stay static.
+- [ ] Identical-layout cuts use `hardCut: true`; no crossfade brightness pulse on shared geometry.
 - [ ] README explains how to run, controls, stills, and the fact that no MP4 was rendered.
 - [ ] Server is running on localhost; the URL is verified.
 

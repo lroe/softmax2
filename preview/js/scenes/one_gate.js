@@ -72,6 +72,9 @@ const two = {
   title: 'The signal rounds to zero',
   start: start(2),
   end: start(4),
+  // Same curve, same coordinates as the hook. A crossfade would double-draw
+  // the axes and pulse the line brightness, so cut hard.
+  hardCut: true,
   draw(ctx, t) {
     const zeroIn = p(t, start(3) + 0.15, 0.7);
     const curveA = 1 - p(t, start(3) + 0.05, 0.55);
